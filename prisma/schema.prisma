@@ -38,4 +38,5 @@ model ChatbotConfig {
   shop            String @unique
   botName         String @default("Aria")
   personalityTone String @default("friendly")
+  avatarPreset    String @default("green")
 }

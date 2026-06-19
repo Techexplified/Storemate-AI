@@ -7,6 +7,30 @@ import "@shopify/polaris/build/esm/styles.css";
 import enTranslations from "@shopify/polaris/locales/en.json";
 import { chat } from "../lib/openai.server";
 
+const PRESETS = [
+  { id: "green",  bg: "#22c55e", icon: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="15" r="7" fill="white"/><path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="white"/></svg>
+  )},
+  { id: "blue",   bg: "#3b82f6", icon: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="14" stroke="white" strokeWidth="2.5"/><circle cx="15" cy="17" r="2" fill="white"/><circle cx="25" cy="17" r="2" fill="white"/><path d="M13 24c1.5 3 12.5 3 14 0" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
+  )},
+  { id: "yellow", bg: "#eab308", icon: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 5l3.9 8.26L33 14.6l-6.5 6.33 1.53 8.94L20 25.5l-8.03 4.37 1.53-8.94L7 14.6l9.1-1.34L20 5z" fill="white"/></svg>
+  )},
+  { id: "pink",   bg: "#ec4899", icon: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 34s-14-9.35-14-19a8 8 0 0116 0 8 8 0 0116 0c0 9.65-14 19-14 19z" fill="white"/></svg>
+  )},
+  { id: "teal",   bg: "#14b8a6", icon: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="14" width="20" height="16" rx="3" fill="white"/><rect x="15" y="19" width="4" height="4" rx="1" fill="#14b8a6"/><rect x="21" y="19" width="4" height="4" rx="1" fill="#14b8a6"/><path d="M20 8v6" stroke="white" strokeWidth="2.5" strokeLinecap="round"/><circle cx="20" cy="7" r="2" fill="white"/><path d="M13 30v3M27 30v3" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
+  )},
+  { id: "indigo", bg: "#6366f1", icon: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20c2-6 4-6 6 0s4 6 6 0 4-6 6 0 4 6 6 0" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
+  )},
+  { id: "orange", bg: "#f97316", icon: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7a11 11 0 00-11 11c0 4.5 2.5 8 6 10v4h10v-4c3.5-2 6-5.5 6-10A11 11 0 0020 7z" fill="white"/><circle cx="15" cy="18" r="2.5" fill="#f97316"/><circle cx="25" cy="18" r="2.5" fill="#f97316"/><path d="M17 30h6M17 33h6" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round"/></svg>
+  )},
+];
+
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const config = await db.chatbotConfig.findUnique({
@@ -46,7 +70,9 @@ export default function Index() {
   const [formData, setFormData] = useState({
     botName: config?.botName || "Aria",
     personalityTone: config?.personalityTone || "friendly",
+    avatarPreset: config?.avatarPreset || "green",
   });
+
   const [suggestedNames, setSuggestedNames] = useState(["Aria", "Nova", "Sage", "Finn", "Luna", "Zara"]);
 
   const updateField = (field, value) =>
@@ -61,6 +87,8 @@ export default function Index() {
 
   const handleSave = () =>
     fetcher.submit({ intent: "save", ...formData }, { method: "POST" });
+
+  const selectedPreset = PRESETS.find(p => p.id === formData.avatarPreset) || PRESETS[0];
 
   return (
     <AppProvider i18n={enTranslations}>
@@ -78,7 +106,9 @@ export default function Index() {
       {/* 2-col layout */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
         {/* Left */}
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+          {/* Section 1: Chatbot Identity */}
           <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
@@ -148,18 +178,68 @@ export default function Index() {
                 ))}
               </div>
             </div>
-
-            {/* Save
-            <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
-              <button
-                onClick={handleSave}
-                disabled={fetcher.state !== "idle"}
-                style={{ backgroundColor: "#00A460", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", cursor: "pointer", fontWeight: "600", fontSize: "14px" }}
-              >
-                {fetcher.state !== "idle" ? "Saving..." : "Save"}
-              </button>
-            </div> */}
           </div>
+
+          {/* Section 2: Avatar & Appearance */}
+          <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <Text variant="headingSm" as="h2">2. Avatar & Appearance</Text>
+                <Text variant="bodySm" tone="subdued">Choose how your assistant presents itself visually</Text>
+              </div>
+              <button style={{ display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "13px" }}>
+                ↑ Upload logo
+              </button>
+            </div>
+
+            {/* Preset grid */}
+            <div style={{display:"grid" , gridTemplateColumns: "repeat(2,1fr)"}}>
+            <div style={{ marginTop: "16px" }}>
+              <Text variant="bodySm" tone="subdued">Preset Avatars</Text>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 52px)", gap: "10px", marginTop: "10px" }}>
+                {PRESETS.map((preset) => (
+                  <div
+                    key={preset.id}
+                    onClick={() => updateField("avatarPreset", preset.id)}
+                    style={{
+                      width: "52px", height: "52px", borderRadius: "50%",
+                      backgroundColor: preset.bg,
+                      cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      outline: formData.avatarPreset === preset.id ? `3px solid #00A460` : "3px solid transparent",
+                      outlineOffset: "2px",
+                      transition: "outline 0.15s",
+                      padding: "10px",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {preset.icon}
+                  </div>
+                ))}
+                {/* + tile */}
+                <div
+                  style={{ width: "52px", height: "52px", borderRadius: "50%", backgroundColor: "#f3f4f6", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", color: "#9ca3af", border: "2px dashed #d1d5db" }}
+                >
+                  +
+                </div>
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", marginLeft:"130px" }}>
+              <Text variant="bodySm" tone="subdued">Preview</Text>
+              <div style={{ width: "80px", height: "80px", borderRadius: "50%", backgroundColor: selectedPreset.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", boxSizing: "border-box" }}>
+                {selectedPreset.icon}
+              </div>
+              <Text variant="bodyMd" fontWeight="semibold">{formData.botName}</Text>
+              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#22c55e" }} />
+                <Text variant="bodySm" tone="subdued">Active now</Text>
+              </div>
+            </div>
+            </div>
+          </div>
+
         </div>
 
         {/* Right — live preview */}
