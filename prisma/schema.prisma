@@ -32,3 +32,10 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+model ChatbotConfig {
+  id              String @id @default(cuid())
+  shop            String @unique
+  botName         String @default("Aria")
+  personalityTone String @default("friendly")
+}

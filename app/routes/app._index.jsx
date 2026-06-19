@@ -1,331 +1,172 @@
-import { useEffect } from "react";
-import { useFetcher } from "react-router";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { boundary } from "@shopify/shopify-app-react-router/server";
+import { useState, useEffect } from "react";
+import { useLoaderData, useFetcher, data } from "react-router";
 import { authenticate } from "../shopify.server";
+import db from "../db.server";
+import { AppProvider, Text } from "@shopify/polaris";
+import "@shopify/polaris/build/esm/styles.css";
+import enTranslations from "@shopify/polaris/locales/en.json";
+import { chat } from "../lib/openai.server";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
-
-  return null;
+  const { session } = await authenticate.admin(request);
+  const config = await db.chatbotConfig.findUnique({
+    where: { shop: session.shop },
+  });
+  return data({ config, shop: session.shop });
 };
 
 export const action = async ({ request }) => {
-  const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-            demoInfo: metafield(namespace: "$app", key: "demo_info") {
-              jsonValue
-            }
-          }
-        }
-      }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-          metafields: [
-            {
-              namespace: "$app",
-              key: "demo_info",
-              value: "Created by React Router Template",
-            },
-          ],
-        },
-      },
-    },
-  );
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyReactRouterTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    },
-  );
-  const variantResponseJson = await variantResponse.json();
-  const metaobjectResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyReactRouterTemplateUpsertMetaobject($handle: MetaobjectHandleInput!, $metaobject: MetaobjectUpsertInput!) {
-      metaobjectUpsert(handle: $handle, metaobject: $metaobject) {
-        metaobject {
-          id
-          handle
-          title: field(key: "title") {
-            jsonValue
-          }
-          description: field(key: "description") {
-            jsonValue
-          }
-        }
-        userErrors {
-          field
-          message
-        }
-      }
-    }`,
-    {
-      variables: {
-        handle: {
-          type: "$app:example",
-          handle: "demo-entry",
-        },
-        metaobject: {
-          fields: [
-            { key: "title", value: "Demo Entry" },
-            {
-              key: "description",
-              value:
-                "This metaobject was created by the Shopify app template to demonstrate the metaobject API.",
-            },
-          ],
-        },
-      },
-    },
-  );
-  const metaobjectResponseJson = await metaobjectResponse.json();
+  const { session } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent");
 
-  return {
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants,
-    metaobject: metaobjectResponseJson.data.metaobjectUpsert.metaobject,
-  };
+  if (intent === "suggestNames") {
+    const storeName = session.shop.replace(".myshopify.com", "");
+    const raw = await chat([{
+      role: "user",
+      content: `Generate 6 short catchy AI assistant names for a Shopify store called "${storeName}". Return ONLY a JSON array of 6 strings, no explanation.`,
+    }]);
+    const names = JSON.parse(raw.replace(/```json|```/g, ""));
+    return data({ names });
+  }
+
+  await db.chatbotConfig.upsert({
+    where: { shop: session.shop },
+    update: { botName: formData.get("botName"), personalityTone: formData.get("personalityTone") },
+    create: { shop: session.shop, botName: formData.get("botName"), personalityTone: formData.get("personalityTone") },
+  });
+  return data({ success: true });
 };
 
 export default function Index() {
+  const { config } = useLoaderData();
   const fetcher = useFetcher();
-  const shopify = useAppBridge();
-  const isLoading =
-    ["loading", "submitting"].includes(fetcher.state) &&
-    fetcher.formMethod === "POST";
+  const namesFetcher = useFetcher();
+
+  const [formData, setFormData] = useState({
+    botName: config?.botName || "Aria",
+    personalityTone: config?.personalityTone || "friendly",
+  });
+  const [suggestedNames, setSuggestedNames] = useState(["Aria", "Nova", "Sage", "Finn", "Luna", "Zara"]);
+
+  const updateField = (field, value) =>
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
   useEffect(() => {
-    if (fetcher.data?.product?.id) {
-      shopify.toast.show("Product created");
-    }
-  }, [fetcher.data?.product?.id, shopify]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+    if (namesFetcher.data?.names) setSuggestedNames(namesFetcher.data.names);
+  }, [namesFetcher.data]);
+
+  const fetchNames = () =>
+    namesFetcher.submit({ intent: "suggestNames" }, { method: "POST" });
+
+  const handleSave = () =>
+    fetcher.submit({ intent: "save", ...formData }, { method: "POST" });
 
   return (
-    <s-page heading="Shopify app template">
-      <s-button slot="primary-action" onClick={generateProduct}>
-        Generate a product
-      </s-button>
+    <AppProvider i18n={enTranslations}>
+      {/* Header */}
+      <div style={{ textAlign: "center", padding: "32px 24px 24px", borderBottom: "1px solid #e1e3e5" }}>
+        <div style={{ display: "inline-block", backgroundColor: "#e8f5e9", color: "#00A460", borderRadius: "20px", padding: "4px 12px", fontSize: "12px", fontWeight: "500", marginBottom: "5px" }}>
+          AI Persona & Branding
+        </div>
+        <Text variant="headingXl" as="h1">Make your chatbot feel like part of your brand</Text>
+        <Text variant="bodyMd" tone="subdued">
+          Customize your AI assistant's personality, appearance, and voice. Your customers will see this in every conversation.
+        </Text>
+      </div>
 
-      <s-section heading="Congrats on creating a new Shopify app 🎉">
-        <s-paragraph>
-          This embedded app template uses{" "}
-          <s-link
-            href="https://shopify.dev/docs/apps/tools/app-bridge"
-            target="_blank"
-          >
-            App Bridge
-          </s-link>{" "}
-          interface examples like an{" "}
-          <s-link href="/app/additional">additional page in the app nav</s-link>
-          , as well as an{" "}
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql"
-            target="_blank"
-          >
-            Admin GraphQL
-          </s-link>{" "}
-          mutation demo, to provide a starting point for app development.
-        </s-paragraph>
-      </s-section>
-      <s-section heading="Get started with products">
-        <s-paragraph>
-          Generate a product with GraphQL and get the JSON output for that
-          product. Learn more about the{" "}
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-            target="_blank"
-          >
-            productCreate
-          </s-link>{" "}
-          mutation in our API references. Includes a product{" "}
-          <s-link
-            href="https://shopify.dev/docs/apps/build/custom-data/metafields"
-            target="_blank"
-          >
-            metafield
-          </s-link>{" "}
-          and{" "}
-          <s-link
-            href="https://shopify.dev/docs/apps/build/custom-data/metaobjects"
-            target="_blank"
-          >
-            metaobject
-          </s-link>
-          .
-        </s-paragraph>
-        <s-stack direction="inline" gap="base">
-          <s-button
-            onClick={generateProduct}
-            {...(isLoading ? { loading: true } : {})}
-          >
-            Generate a product
-          </s-button>
-          {fetcher.data?.product && (
-            <s-button
-              onClick={() => {
-                shopify.intents.invoke?.("edit:shopify/Product", {
-                  value: fetcher.data?.product?.id,
-                });
-              }}
-              target="_blank"
-              variant="tertiary"
-            >
-              Edit product
-            </s-button>
-          )}
-        </s-stack>
-        {fetcher.data?.product && (
-          <s-section heading="productCreate mutation">
-            <s-stack direction="block" gap="base">
-              <s-box
-                padding="base"
-                borderWidth="base"
-                borderRadius="base"
-                background="subdued"
+      {/* 2-col layout */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+        {/* Left */}
+        <div>
+          <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <Text variant="headingSm" as="h2">1. Chatbot Identity</Text>
+                <Text variant="bodySm" tone="subdued">Name and personality your customers will see</Text>
+              </div>
+              <span style={{ backgroundColor: "#e8f5e9", color: "#00A460", borderRadius: "20px", padding: "3px 10px", fontSize: "12px" }}>✦ AI-assisted</span>
+            </div>
+
+            {/* Name input */}
+            <div style={{ marginTop: "16px" }}>
+              <label style={{ fontSize: "13px", fontWeight: "500" }}>Assistant Name</label>
+              <div style={{ position: "relative", marginTop: "6px" }}>
+                <input
+                  value={formData.botName}
+                  onChange={(e) => updateField("botName", e.target.value)}
+                  maxLength={25}
+                  style={{ width: "100%", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "8px 50px 8px 12px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
+                />
+                <button
+                  style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#00A460", fontSize: "13px", fontWeight: "500" }}
+                >
+                  ✦ AI
+                </button>
+              </div>
+              <Text variant="bodySm" tone="subdued">This name appears in the chat header and all messages</Text>
+            </div>
+
+            {/* Suggested names */}
+            <div style={{ marginTop: "12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <Text variant="bodySm" tone="subdued">✦ AI-suggested names for your store</Text>
+                <button
+                  onClick={fetchNames}
+                  disabled={namesFetcher.state !== "idle"}
+                  style={{ background: "none", border: "1px solid #e1e3e5", borderRadius: "6px", padding: "3px 10px", cursor: "pointer", fontSize: "12px" }}
+                >
+                  {namesFetcher.state !== "idle" ? "Loading..." : "Refresh"}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {suggestedNames.map((name) => (
+                  <button
+                    key={name}
+                    onClick={() => updateField("botName", name)}
+                    style={{ backgroundColor: formData.botName === name ? "#00A460" : "#f0fdf4", color: formData.botName === name ? "#fff" : "#00A460", border: "1px solid #00A460", borderRadius: "20px", padding: "4px 12px", fontSize: "12px", cursor: "pointer" }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tone */}
+            <div style={{ marginTop: "16px" }}>
+              <label style={{ fontSize: "13px", fontWeight: "500" }}>Personality Tone</label>
+              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                {[["friendly", "Friendly", "Warm & casual"], ["professional", "Professional", "Clear & formal"], ["concise", "Concise", "Direct & brief"]].map(([val, label, sub]) => (
+                  <button
+                    key={val}
+                    onClick={() => updateField("personalityTone", val)}
+                    style={{ flex: 1, padding: "10px 8px", borderRadius: "8px", border: `2px solid ${formData.personalityTone === val ? "#00A460" : "#e1e3e5"}`, backgroundColor: formData.personalityTone === val ? "#f0fdf4" : "#fff", cursor: "pointer", textAlign: "center" }}
+                  >
+                    <div style={{ fontWeight: "600", fontSize: "13px", color: formData.personalityTone === val ? "#00A460" : "#111" }}>{label}</div>
+                    <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px" }}>{sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Save
+            <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
+              <button
+                onClick={handleSave}
+                disabled={fetcher.state !== "idle"}
+                style={{ backgroundColor: "#00A460", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", cursor: "pointer", fontWeight: "600", fontSize: "14px" }}
               >
-                <pre style={{ margin: 0 }}>
-                  <code>{JSON.stringify(fetcher.data.product, null, 2)}</code>
-                </pre>
-              </s-box>
+                {fetcher.state !== "idle" ? "Saving..." : "Save"}
+              </button>
+            </div> */}
+          </div>
+        </div>
 
-              <s-heading>productVariantsBulkUpdate mutation</s-heading>
-              <s-box
-                padding="base"
-                borderWidth="base"
-                borderRadius="base"
-                background="subdued"
-              >
-                <pre style={{ margin: 0 }}>
-                  <code>{JSON.stringify(fetcher.data.variant, null, 2)}</code>
-                </pre>
-              </s-box>
-
-              <s-heading>metaobjectUpsert mutation</s-heading>
-              <s-box
-                padding="base"
-                borderWidth="base"
-                borderRadius="base"
-                background="subdued"
-              >
-                <pre style={{ margin: 0 }}>
-                  <code>
-                    {JSON.stringify(fetcher.data.metaobject, null, 2)}
-                  </code>
-                </pre>
-              </s-box>
-            </s-stack>
-          </s-section>
-        )}
-      </s-section>
-
-      <s-section slot="aside" heading="App template specs">
-        <s-paragraph>
-          <s-text>Framework: </s-text>
-          <s-link href="https://reactrouter.com/" target="_blank">
-            React Router
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Interface: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/api/app-home/using-polaris-components"
-            target="_blank"
-          >
-            Polaris web components
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>API: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql"
-            target="_blank"
-          >
-            GraphQL
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Custom data: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/apps/build/custom-data"
-            target="_blank"
-          >
-            Metafields &amp; metaobjects
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Database: </s-text>
-          <s-link href="https://www.prisma.io/" target="_blank">
-            Prisma
-          </s-link>
-        </s-paragraph>
-      </s-section>
-
-      <s-section slot="aside" heading="Next steps">
-        <s-unordered-list>
-          <s-list-item>
-            Build an{" "}
-            <s-link
-              href="https://shopify.dev/docs/apps/getting-started/build-app-example"
-              target="_blank"
-            >
-              example app
-            </s-link>
-          </s-list-item>
-          <s-list-item>
-            Explore Shopify&apos;s API with{" "}
-            <s-link
-              href="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-              target="_blank"
-            >
-              GraphiQL
-            </s-link>
-          </s-list-item>
-        </s-unordered-list>
-      </s-section>
-    </s-page>
+        {/* Right — live preview */}
+        <div style={{ position: "sticky", top: "24px", alignSelf: "start" }}>
+          {/* preview goes here */}
+        </div>
+      </div>
+    </AppProvider>
   );
 }
-
-export const headers = (headersArgs) => {
-  return boundary.headers(headersArgs);
-};
