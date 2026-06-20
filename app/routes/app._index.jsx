@@ -736,6 +736,22 @@ export default function Index() {
           </div>
         </div>
       </div>
+
+      {/* Bottom bar */}
+      <div style={{  bottom: "0", padding: "16px 24px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px", zIndex: 10 }}>
+        <button
+          onClick={handleSave}
+          disabled={fetcher.state !== "idle"}
+          style={{ display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "8px 16px", background: "#fff", cursor: "pointer", fontSize: "13px", color: "#374151" }}
+        >
+          🖫 {fetcher.state !== "idle" ? "Saving..." : "Save draft"}
+        </button>
+        <button
+          style={{ backgroundColor: "#00A460", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}
+        >
+          Continue →
+        </button>
+      </div>
     </AppProvider>
   );
 }
