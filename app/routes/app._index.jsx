@@ -2,33 +2,47 @@ import { useState, useEffect } from "react";
 import { useLoaderData, useFetcher, data } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
-import { AppProvider, Text } from "@shopify/polaris";
+import { AppProvider, Text, Banner } from "@shopify/polaris";
 import "@shopify/polaris/build/esm/styles.css";
 import enTranslations from "@shopify/polaris/locales/en.json";
 import { chat } from "../lib/openai.server";
 
 const PRESETS = [
-  { id: "green",  bg: "#22c55e", icon: (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="15" r="7" fill="white"/><path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="white"/></svg>
-  )},
-  { id: "blue",   bg: "#3b82f6", icon: (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="14" stroke="white" strokeWidth="2.5"/><circle cx="15" cy="17" r="2" fill="white"/><circle cx="25" cy="17" r="2" fill="white"/><path d="M13 24c1.5 3 12.5 3 14 0" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
-  )},
-  { id: "yellow", bg: "#eab308", icon: (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 5l3.9 8.26L33 14.6l-6.5 6.33 1.53 8.94L20 25.5l-8.03 4.37 1.53-8.94L7 14.6l9.1-1.34L20 5z" fill="white"/></svg>
-  )},
-  { id: "pink",   bg: "#ec4899", icon: (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 34s-14-9.35-14-19a8 8 0 0116 0 8 8 0 0116 0c0 9.65-14 19-14 19z" fill="white"/></svg>
-  )},
-  { id: "teal",   bg: "#14b8a6", icon: (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="14" width="20" height="16" rx="3" fill="white"/><rect x="15" y="19" width="4" height="4" rx="1" fill="#14b8a6"/><rect x="21" y="19" width="4" height="4" rx="1" fill="#14b8a6"/><path d="M20 8v6" stroke="white" strokeWidth="2.5" strokeLinecap="round"/><circle cx="20" cy="7" r="2" fill="white"/><path d="M13 30v3M27 30v3" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
-  )},
-  { id: "indigo", bg: "#6366f1", icon: (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20c2-6 4-6 6 0s4 6 6 0 4-6 6 0 4 6 6 0" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
-  )},
-  { id: "orange", bg: "#f97316", icon: (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7a11 11 0 00-11 11c0 4.5 2.5 8 6 10v4h10v-4c3.5-2 6-5.5 6-10A11 11 0 0020 7z" fill="white"/><circle cx="15" cy="18" r="2.5" fill="#f97316"/><circle cx="25" cy="18" r="2.5" fill="#f97316"/><path d="M17 30h6M17 33h6" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round"/></svg>
-  )},
+  {
+    id: "green", bg: "#22c55e", icon: (
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="15" r="7" fill="white" /><path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="white" /></svg>
+    )
+  },
+  {
+    id: "blue", bg: "#3b82f6", icon: (
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="14" stroke="white" strokeWidth="2.5" /><circle cx="15" cy="17" r="2" fill="white" /><circle cx="25" cy="17" r="2" fill="white" /><path d="M13 24c1.5 3 12.5 3 14 0" stroke="white" strokeWidth="2.5" strokeLinecap="round" /></svg>
+    )
+  },
+  {
+    id: "yellow", bg: "#eab308", icon: (
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 5l3.9 8.26L33 14.6l-6.5 6.33 1.53 8.94L20 25.5l-8.03 4.37 1.53-8.94L7 14.6l9.1-1.34L20 5z" fill="white" /></svg>
+    )
+  },
+  {
+    id: "pink", bg: "#ec4899", icon: (
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 34s-14-9.35-14-19a8 8 0 0116 0 8 8 0 0116 0c0 9.65-14 19-14 19z" fill="white" /></svg>
+    )
+  },
+  {
+    id: "teal", bg: "#14b8a6", icon: (
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="14" width="20" height="16" rx="3" fill="white" /><rect x="15" y="19" width="4" height="4" rx="1" fill="#14b8a6" /><rect x="21" y="19" width="4" height="4" rx="1" fill="#14b8a6" /><path d="M20 8v6" stroke="white" strokeWidth="2.5" strokeLinecap="round" /><circle cx="20" cy="7" r="2" fill="white" /><path d="M13 30v3M27 30v3" stroke="white" strokeWidth="2.5" strokeLinecap="round" /></svg>
+    )
+  },
+  {
+    id: "indigo", bg: "#6366f1", icon: (
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20c2-6 4-6 6 0s4 6 6 0 4-6 6 0 4 6 6 0" stroke="white" strokeWidth="2.5" strokeLinecap="round" /></svg>
+    )
+  },
+  {
+    id: "orange", bg: "#f97316", icon: (
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7a11 11 0 00-11 11c0 4.5 2.5 8 6 10v4h10v-4c3.5-2 6-5.5 6-10A11 11 0 0020 7z" fill="white" /><circle cx="15" cy="18" r="2.5" fill="#f97316" /><circle cx="25" cy="18" r="2.5" fill="#f97316" /><path d="M17 30h6M17 33h6" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" /></svg>
+    )
+  },
 ];
 
 export const loader = async ({ request }) => {
@@ -56,8 +70,8 @@ export const action = async ({ request }) => {
 
   await db.chatbotConfig.upsert({
     where: { shop: session.shop },
-    update: { botName: formData.get("botName"), personalityTone: formData.get("personalityTone") },
-    create: { shop: session.shop, botName: formData.get("botName"), personalityTone: formData.get("personalityTone") },
+    update: { botName: formData.get("botName"), personalityTone: formData.get("personalityTone"), avatarPreset: formData.get("avatarPreset"), logoUrl: formData.get("logoUrl") || null },
+    create: { shop: session.shop, botName: formData.get("botName"), personalityTone: formData.get("personalityTone"), avatarPreset: formData.get("avatarPreset"), logoUrl: formData.get("logoUrl") || null },
   });
   return data({ success: true });
 };
@@ -74,6 +88,8 @@ export default function Index() {
   });
 
   const [suggestedNames, setSuggestedNames] = useState(["Aria", "Nova", "Sage", "Finn", "Luna", "Zara"]);
+  const [logoUrl, setLogoUrl] = useState(config?.logoUrl || null);
+  const [logoError, setLogoError] = useState(null);
 
   const updateField = (field, value) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -86,7 +102,45 @@ export default function Index() {
     namesFetcher.submit({ intent: "suggestNames" }, { method: "POST" });
 
   const handleSave = () =>
-    fetcher.submit({ intent: "save", ...formData }, { method: "POST" });
+    fetcher.submit({ intent: "save", ...formData, logoUrl: logoUrl || "" }, { method: "POST" });
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Type check
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setLogoError("Only JPG, PNG, or WebP images are allowed.");
+      return;
+    }
+    // Size check (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("Logo must be under 2MB. Please choose a smaller image.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target.result;
+      // Dimension check
+      const img = new Image();
+      img.onload = () => {
+        if (img.width < 100 || img.height < 100) {
+          setLogoError("Image must be at least 100×100 pixels.");
+          return;
+        }
+        if (img.width > 1000 || img.height > 1000) {
+          setLogoError("Image must be at most 1000×1000 pixels.");
+          return;
+        }
+        setLogoError(null);
+        setLogoUrl(base64);
+        updateField("avatarPreset", ""); // clear preset
+      };
+      img.src = base64;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const selectedPreset = PRESETS.find(p => p.id === formData.avatarPreset) || PRESETS[0];
 
@@ -187,56 +241,78 @@ export default function Index() {
                 <Text variant="headingSm" as="h2">2. Avatar & Appearance</Text>
                 <Text variant="bodySm" tone="subdued">Choose how your assistant presents itself visually</Text>
               </div>
-              <button style={{ display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "13px" }}>
-                ↑ Upload logo
-              </button>
+              <>
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  style={{ display: "none" }}
+                  onChange={handleLogoUpload}
+                />
+                <button
+                  onClick={() => document.getElementById("logo-upload").click()}
+                  style={{ display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "6px 12px", background: "#fff", cursor: "pointer", fontSize: "13px" }}
+                >
+                  ↑ Upload logo
+                </button>
+              </>
             </div>
+            {logoError && (
+              <div style={{ marginTop: "10px" }}>
+                <Banner tone="critical" onDismiss={() => setLogoError(null)}>
+                  {logoError}
+                </Banner>
+              </div>
+            )}
 
             {/* Preset grid */}
-            <div style={{display:"grid" , gridTemplateColumns: "repeat(2,1fr)"}}>
-            <div style={{ marginTop: "16px" }}>
-              <Text variant="bodySm" tone="subdued">Preset Avatars</Text>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 52px)", gap: "10px", marginTop: "10px" }}>
-                {PRESETS.map((preset) => (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)" }}>
+              <div style={{ marginTop: "16px" }}>
+                <Text variant="bodySm" tone="subdued">Preset Avatars</Text>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 52px)", gap: "10px", marginTop: "10px" }}>
+                  {PRESETS.map((preset) => (
+                    <div
+                      key={preset.id}
+                      onClick={() => { updateField("avatarPreset", preset.id); setLogoUrl(null); setLogoError(null); }}
+                      style={{
+                        width: "52px", height: "52px", borderRadius: "50%",
+                        backgroundColor: preset.bg,
+                        cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        outline: formData.avatarPreset === preset.id ? `3px solid #00A460` : "3px solid transparent",
+                        outlineOffset: "2px",
+                        transition: "outline 0.15s",
+                        padding: "10px",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      {preset.icon}
+                    </div>
+                  ))}
+                  {/* + tile */}
                   <div
-                    key={preset.id}
-                    onClick={() => updateField("avatarPreset", preset.id)}
-                    style={{
-                      width: "52px", height: "52px", borderRadius: "50%",
-                      backgroundColor: preset.bg,
-                      cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      outline: formData.avatarPreset === preset.id ? `3px solid #00A460` : "3px solid transparent",
-                      outlineOffset: "2px",
-                      transition: "outline 0.15s",
-                      padding: "10px",
-                      boxSizing: "border-box",
-                    }}
+                    style={{ width: "52px", height: "52px", borderRadius: "50%", backgroundColor: "#f3f4f6", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", color: "#9ca3af", border: "2px dashed #d1d5db" }}
                   >
-                    {preset.icon}
+                    +
                   </div>
-                ))}
-                {/* + tile */}
-                <div
-                  style={{ width: "52px", height: "52px", borderRadius: "50%", backgroundColor: "#f3f4f6", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", color: "#9ca3af", border: "2px dashed #d1d5db" }}
-                >
-                  +
                 </div>
               </div>
-            </div>
 
-            {/* Preview */}
-            <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", marginLeft:"130px" }}>
-              <Text variant="bodySm" tone="subdued">Preview</Text>
-              <div style={{ width: "80px", height: "80px", borderRadius: "50%", backgroundColor: selectedPreset.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", boxSizing: "border-box" }}>
-                {selectedPreset.icon}
+              {/* Preview */}
+              <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", marginLeft: "130px" }}>
+                <Text variant="bodySm" tone="subdued">Preview</Text>
+                <div style={{ width: "80px", height: "80px", borderRadius: "50%", backgroundColor: logoUrl ? "#f3f4f6" : selectedPreset.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: logoUrl ? "0" : "16px", boxSizing: "border-box", overflow: "hidden" }}>
+                  {logoUrl
+                    ? <img src={logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                    : selectedPreset.icon
+                  }
+                </div>
+                <Text variant="bodyMd" fontWeight="semibold">{formData.botName}</Text>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#22c55e" }} />
+                  <Text variant="bodySm" tone="subdued">Active now</Text>
+                </div>
               </div>
-              <Text variant="bodyMd" fontWeight="semibold">{formData.botName}</Text>
-              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#22c55e" }} />
-                <Text variant="bodySm" tone="subdued">Active now</Text>
-              </div>
-            </div>
             </div>
           </div>
 
