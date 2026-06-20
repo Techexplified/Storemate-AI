@@ -52,6 +52,22 @@ const getBrandPresets = (themeColor) => [
   "#f43f5e", "#1f2937", "#0ea5e9",
 ];
 
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "fr", label: "French" },
+  { code: "de", label: "German" },
+  { code: "pt", label: "Portuguese" },
+  { code: "hi", label: "Hindi" },
+  { code: "ar", label: "Arabic" },
+  { code: "zh", label: "Chinese" },
+  { code: "ja", label: "Japanese" },
+  { code: "ko", label: "Korean" },
+  { code: "it", label: "Italian" },
+  { code: "nl", label: "Dutch" },
+];
+
+
 export const loader = async ({ request }) => {
   const { session, admin } = await authenticate.admin(request);
   const config = await db.chatbotConfig.findUnique({ where: { shop: session.shop } });
@@ -101,6 +117,7 @@ export const action = async ({ request }) => {
       welcomeMessage: formData.get("welcomeMessage") || null,
       starterPrompts: formData.get("starterPrompts") || null,
       brandColor: formData.get("brandColor") || "#00A460",
+      language: formData.get("language") || "en",
     },
     create: {
       shop: session.shop,
@@ -111,6 +128,7 @@ export const action = async ({ request }) => {
       welcomeMessage: formData.get("welcomeMessage") || null,
       starterPrompts: formData.get("starterPrompts") || null,
       brandColor: formData.get("brandColor") || "#00A460",
+      language: formData.get("language") || "en",
     },
   });
   return data({ success: true });
@@ -128,6 +146,7 @@ export default function Index() {
     avatarPreset: config?.avatarPreset || "green",
     welcomeMessage: config?.welcomeMessage || "",
     brandColor: config?.brandColor || "#00A460",
+    language: config?.language || "en",
   });
 
   const [suggestedNames, setSuggestedNames] = useState(["Aria", "Nova", "Sage", "Finn", "Luna", "Zara"]);
@@ -225,7 +244,7 @@ export default function Index() {
       {/* Header */}
       <div style={{ textAlign: "center", padding: "32px 24px 24px", borderBottom: "1px solid #e1e3e5" }}>
         <div style={{ display: "inline-block", backgroundColor: "#e8f5e9", color: "#00A460", borderRadius: "20px", padding: "4px 12px", fontSize: "12px", fontWeight: "500", marginBottom: "5px" }}>
-          AI Persona & Branding
+          Step 1 - AI Persona & Branding
         </div>
         <Text variant="headingXl" as="h1">Make your chatbot feel like part of your brand</Text>
         <Text variant="bodyMd" tone="subdued">
@@ -538,7 +557,32 @@ export default function Index() {
             {/* Section 5: Language — placeholder for now */}
             <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px" }}>
               <Text variant="headingSm" as="h2">5. Language</Text>
-              <Text variant="bodySm" tone="subdued">Coming soon</Text>
+              <Text variant="bodySm" tone="subdued">Language your AI will respond in</Text>
+
+              <div style={{ marginTop: "14px", maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", paddingRight: "4px" }}>
+                {LANGUAGES.map((lang) => (
+                  <div
+                    key={lang.code}
+                    onClick={() => updateField("language", lang.code)}
+                    style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "8px 12px", borderRadius: "8px", cursor: "pointer",
+                      backgroundColor: formData.language === lang.code ? "#f0fdf4" : "transparent",
+                      border: `1px solid ${formData.language === lang.code ? "#00A460" : "transparent"}`,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <span style={{ fontSize: "13px", color: formData.language === lang.code ? "#00A460" : "#111", fontWeight: formData.language === lang.code ? "500" : "400" }}>
+                      {lang.label}
+                    </span>
+                    {formData.language === lang.code && (
+                      <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                        <path d="M5 13l4 4L19 7" stroke="#00A460" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
           </div>

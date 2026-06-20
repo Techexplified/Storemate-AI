@@ -43,4 +43,5 @@ model ChatbotConfig {
   welcomeMessage  String?
   starterPrompts  String?
   brandColor      String? @default("#00A460")
+  language        String? @default("en")
 }
