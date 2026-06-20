@@ -152,6 +152,7 @@ export default function Index() {
   const [suggestedNames, setSuggestedNames] = useState(["Aria", "Nova", "Sage", "Finn", "Luna", "Zara"]);
   const [logoUrl, setLogoUrl] = useState(config?.logoUrl || null);
   const [logoError, setLogoError] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
   const [themeColor, setThemeColor] = useState("#00A460");
   const [starterPrompts, setStarterPrompts] = useState(
     config?.starterPrompts ? JSON.parse(config.starterPrompts) : ["Where is my order?"]
@@ -588,9 +589,151 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Right — live preview */}
+        {/* Right — Live Preview */}
         <div style={{ position: "sticky", top: "24px", alignSelf: "start" }}>
-          {/* preview goes here */}
+          {/* Preview Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#22c55e" }} />
+              <Text variant="bodySm" fontWeight="semibold">Live Preview</Text>
+            </div>
+            <div style={{ display: "flex", gap: "6px" }}>
+              {["Desktop", "Mobile"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setIsMobile(mode === "Mobile")}
+                  style={{
+                    padding: "4px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer",
+                    border: "1px solid #e1e3e5",
+                    backgroundColor: (isMobile ? "Mobile" : "Desktop") === mode ? "#f0fdf4" : "#fff",
+                    color: (isMobile ? "Mobile" : "Desktop") === mode ? "#00A460" : "#6b7280",
+                    fontWeight: (isMobile ? "Mobile" : "Desktop") === mode ? "600" : "400",
+                  }}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Browser mockup */}
+          <div style={{
+            width: isMobile ? "390px" : "100%",
+            margin: "0 auto",
+            border: "1px solid #e1e3e5",
+            borderRadius: "12px",
+            overflow: "hidden",
+            backgroundColor: "#f9fafb",
+            transition: "width 0.3s",
+          }}>
+            {/* Browser bar */}
+            <div style={{ backgroundColor: "#f3f4f6", padding: "8px 12px", display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid #e1e3e5" }}>
+              <div style={{ display: "flex", gap: "5px" }}>
+                {["#ef4444", "#eab308", "#22c55e"].map((c) => (
+                  <div key={c} style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: c }} />
+                ))}
+              </div>
+              <div style={{ flex: 1, backgroundColor: "#fff", borderRadius: "4px", padding: "3px 10px", fontSize: "11px", color: "#9ca3af", textAlign: "center" }}>
+                yourstore.myshopify.com
+              </div>
+            </div>
+
+            {/* Fake store */}
+            <div style={{ position: "relative", padding: "16px", minHeight: "420px" }}>
+              {/* Fake nav */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <span style={{ fontWeight: "700", fontSize: "13px" }}>✦ AuraStore</span>
+                {!isMobile && (
+                  <div style={{ display: "flex", gap: "16px" }}>
+                    {["Shop", "Collections", "About"].map((l) => (
+                      <span key={l} style={{ fontSize: "12px", color: "#6b7280" }}>{l}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Hero */}
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ fontSize: "18px", fontWeight: "700", color: "#111" }}>Premium Essentials</div>
+                <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>Curated for modern living.</div>
+              </div>
+
+              {/* Chat widget */}
+              <div style={{
+                position: "absolute",
+                bottom: "50px",
+                right: "16px",
+                width: isMobile ? "280px" : "300px",
+                backgroundColor: "#fff",
+                borderRadius: "16px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                overflow: "hidden",
+              }}>
+                {/* Chat header */}
+                <div style={{ backgroundColor: formData.brandColor, padding: "12px 14px", display: "flex", alignItems: "center", gap: "10px" }}>
+                  {/* Avatar */}
+                  <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: logoUrl ? "#f3f4f6" : selectedPreset.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: logoUrl ? "0" : "7px", boxSizing: "border-box", overflow: "hidden", flexShrink: 0 }}>
+                    {logoUrl
+                      ? <img src={logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                      : <div style={{ width: "100%", height: "100%" }}>{selectedPreset.icon}</div>
+                    }
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "13px", fontWeight: "600", color: "#fff" }}>{formData.botName}</div>
+                    <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.8)" }}>● Online · Typically instant</div>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <span style={{ color: "rgba(255,255,255,0.8)", fontSize: "16px", cursor: "pointer" }}>−</span>
+                    <span style={{ color: "rgba(255,255,255,0.8)", fontSize: "16px", cursor: "pointer" }}>×</span>
+                  </div>
+                </div>
+
+                {/* Chat body */}
+                <div style={{ padding: "12px", backgroundColor: "#f9fafb", minHeight: "200px" }}>
+                  {/* Welcome message bubble */}
+                  <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                    <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: selectedPreset.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "5px", boxSizing: "border-box", flexShrink: 0 }}>
+                      {logoUrl
+                        ? <img src={logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                        : selectedPreset.icon
+                      }
+                    </div>
+                    <div style={{ backgroundColor: "#fff", borderRadius: "12px", borderTopLeftRadius: "4px", padding: "10px 12px", fontSize: "12px", color: "#111", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", maxWidth: "85%" }}>
+                      {formData.welcomeMessage || `Hi! I'm ${formData.botName}, how can I help you?`}
+                    </div>
+                  </div>
+
+                  {/* Starter prompts */}
+                  {starterPrompts.length > 0 && (
+                    <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                      {starterPrompts.filter(p => p.trim()).map((prompt, i) => (
+                        <div key={i} style={{ backgroundColor: "#fff", border: `1px solid ${formData.brandColor}`, borderRadius: "20px", padding: "5px 12px", fontSize: "11px", color: formData.brandColor, cursor: "pointer" }}>
+                          {prompt}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Input bar */}
+                <div style={{ padding: "10px 12px", borderTop: "1px solid #e1e3e5", display: "flex", alignItems: "center", gap: "8px", backgroundColor: "#fff" }}>
+                  <div style={{ flex: 1, fontSize: "12px", color: "#9ca3af" }}>Message {formData.botName}...</div>
+                  <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: formData.brandColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                      <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* FAB */}
+              <div style={{ position: "absolute", bottom: "16px", right: "16px", width: "40px", height: "40px", borderRadius: "50%", backgroundColor: formData.brandColor, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", cursor: "pointer" }}>
+                {/* <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg> */}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </AppProvider>
