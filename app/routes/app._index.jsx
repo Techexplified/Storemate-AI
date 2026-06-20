@@ -58,6 +58,17 @@ export const action = async ({ request }) => {
   const formData = await request.formData();
   const intent = formData.get("intent");
 
+  if (intent === "generateWelcome") {
+    const template = formData.get("template");
+    const botName = formData.get("botName");
+    const tone = formData.get("personalityTone");
+    const raw = await chat([{
+      role: "user",
+      content: `Generate a short welcome message for a Shopify store chatbot named "${botName}" with a ${tone} personality tone. Template style: ${template}. Max 2 sentences. Return ONLY the message text, no quotes.`,
+    }]);
+    return data({ welcomeMessage: raw });
+  }
+
   if (intent === "suggestNames") {
     const storeName = session.shop.replace(".myshopify.com", "");
     const raw = await chat([{
@@ -70,8 +81,23 @@ export const action = async ({ request }) => {
 
   await db.chatbotConfig.upsert({
     where: { shop: session.shop },
-    update: { botName: formData.get("botName"), personalityTone: formData.get("personalityTone"), avatarPreset: formData.get("avatarPreset"), logoUrl: formData.get("logoUrl") || null },
-    create: { shop: session.shop, botName: formData.get("botName"), personalityTone: formData.get("personalityTone"), avatarPreset: formData.get("avatarPreset"), logoUrl: formData.get("logoUrl") || null },
+    update: {
+      botName: formData.get("botName"),
+      personalityTone: formData.get("personalityTone"),
+      avatarPreset: formData.get("avatarPreset"),
+      logoUrl: formData.get("logoUrl") || null,
+      welcomeMessage: formData.get("welcomeMessage") || null,
+      starterPrompts: formData.get("starterPrompts") || null,
+    },
+    create: {
+      shop: session.shop,
+      botName: formData.get("botName"),
+      personalityTone: formData.get("personalityTone"),
+      avatarPreset: formData.get("avatarPreset"),
+      logoUrl: formData.get("logoUrl") || null,
+      welcomeMessage: formData.get("welcomeMessage") || null,
+      starterPrompts: formData.get("starterPrompts") || null,
+    },
   });
   return data({ success: true });
 };
@@ -80,17 +106,22 @@ export default function Index() {
   const { config } = useLoaderData();
   const fetcher = useFetcher();
   const namesFetcher = useFetcher();
+  const templateFetcher = useFetcher();
 
   const [formData, setFormData] = useState({
     botName: config?.botName || "Aria",
     personalityTone: config?.personalityTone || "friendly",
     avatarPreset: config?.avatarPreset || "green",
+    welcomeMessage: config?.welcomeMessage || "",
   });
 
   const [suggestedNames, setSuggestedNames] = useState(["Aria", "Nova", "Sage", "Finn", "Luna", "Zara"]);
   const [logoUrl, setLogoUrl] = useState(config?.logoUrl || null);
   const [logoError, setLogoError] = useState(null);
 
+  const [starterPrompts, setStarterPrompts] = useState(
+    config?.starterPrompts ? JSON.parse(config.starterPrompts) : ["Where is my order?"]
+  );
   const updateField = (field, value) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
 
@@ -98,11 +129,37 @@ export default function Index() {
     if (namesFetcher.data?.names) setSuggestedNames(namesFetcher.data.names);
   }, [namesFetcher.data]);
 
+  useEffect(() => {
+    if (templateFetcher.data?.welcomeMessage) {
+      updateField("welcomeMessage", templateFetcher.data.welcomeMessage);
+    }
+  }, [templateFetcher.data]);
+
   const fetchNames = () =>
     namesFetcher.submit({ intent: "suggestNames" }, { method: "POST" });
 
   const handleSave = () =>
-    fetcher.submit({ intent: "save", ...formData, logoUrl: logoUrl || "" }, { method: "POST" });
+    fetcher.submit({
+      intent: "save",
+      ...formData,
+      logoUrl: logoUrl || "",
+      starterPrompts: JSON.stringify(starterPrompts),
+    }, { method: "POST" });
+
+  const addStarterPrompt = () => {
+    if (starterPrompts.length >= 3) return;
+    setStarterPrompts([...starterPrompts, ""]);
+  };
+
+  const updateStarterPrompt = (index, value) => {
+    const updated = [...starterPrompts];
+    updated[index] = value;
+    setStarterPrompts(updated);
+  };
+
+  const removeStarterPrompt = (index) => {
+    setStarterPrompts(starterPrompts.filter((_, i) => i !== index));
+  };
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -153,7 +210,7 @@ export default function Index() {
         </div>
         <Text variant="headingXl" as="h1">Make your chatbot feel like part of your brand</Text>
         <Text variant="bodyMd" tone="subdued">
-          Customize your AI assistant's personality, appearance, and voice. Your customers will see this in every conversation.
+          Customize your AI assistant's personality, and appearance. Your customers will see this in every conversation.
         </Text>
       </div>
 
@@ -316,6 +373,88 @@ export default function Index() {
             </div>
           </div>
 
+          {/* Section 3: Welcome Message */}
+          <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px" }}>
+            <div>
+              <Text variant="headingSm" as="h2">3. Welcome Message</Text>
+              <Text variant="bodySm" tone="subdued">First thing customers see when they open the chat</Text>
+            </div>
+
+            {/* Template chips */}
+            <div style={{ marginTop: "16px" }}>
+              <Text variant="bodySm" tone="subdued">Message templates</Text>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
+                {["Friendly greeting", "Shop assistant", "Order tracker", "Minimal"].map((template) => (
+                  <button
+                    key={template}
+                    disabled={templateFetcher.state !== "idle"}
+                    onClick={() =>
+                      templateFetcher.submit(
+                        { intent: "generateWelcome", template, botName: formData.botName, personalityTone: formData.personalityTone },
+                        { method: "POST" }
+                      )
+                    }
+                    style={{ backgroundColor: "#f9fafb", border: "1px solid #e1e3e5", borderRadius: "20px", padding: "4px 12px", fontSize: "12px", cursor: "pointer" }}
+                  >
+                    {templateFetcher.state !== "idle" ? "Generating..." : template}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Textarea */}
+            <div style={{ marginTop: "16px" }}>
+              <label style={{ fontSize: "13px", fontWeight: "500" }}>Welcome message text</label>
+              <div style={{ position: "relative", marginTop: "6px" }}>
+                <textarea
+                  value={formData.welcomeMessage}
+                  onChange={(e) => updateField("welcomeMessage", e.target.value)}
+                  maxLength={300}
+                  placeholder="e.g. Hi! I'm Aria, how can I help you?"
+                  rows={4}
+                  style={{ width: "100%", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "10px 12px", fontSize: "14px", outline: "none", boxSizing: "border-box", resize: "none", fontFamily: "inherit" }}
+                  onFocus={(e) => e.target.style.borderColor = "#00A460"}
+                  onBlur={(e) => e.target.style.borderColor = "#e1e3e5"}
+                />
+                <div style={{ position: "absolute", bottom: "8px", right: "10px", fontSize: "11px", color: "#9ca3af" }}>
+                  {formData.welcomeMessage.length} / 300
+                </div>
+              </div>
+            </div>
+
+            {/* Starter prompts */}
+            <div style={{ marginTop: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Text variant="bodySm" tone="subdued">Starter prompts shown to customers</Text>
+                {starterPrompts.length < 3 && (
+                  <button
+                    onClick={addStarterPrompt}
+                    style={{ background: "none", border: "none", color: "#00A460", fontSize: "13px", fontWeight: "500", cursor: "pointer" }}
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" }}>
+                {starterPrompts.map((prompt, index) => (
+                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px", backgroundColor: "#f9fafb", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "8px 12px" }}>
+                    <input
+                      value={prompt}
+                      onChange={(e) => updateStarterPrompt(index, e.target.value)}
+                      placeholder="e.g. What are your shipping options?"
+                      style={{ flex: 1, border: "none", background: "none", fontSize: "13px", outline: "none" }}
+                    />
+                    <button
+                      onClick={() => removeStarterPrompt(index)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "16px", lineHeight: 1 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Right — live preview */}

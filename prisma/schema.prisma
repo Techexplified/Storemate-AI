@@ -40,4 +40,6 @@ model ChatbotConfig {
   personalityTone String @default("friendly")
   avatarPreset    String @default("green")
   logoUrl         String?
+  welcomeMessage  String?
+  starterPrompts  String?
 }
