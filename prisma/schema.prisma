@@ -42,4 +42,5 @@ model ChatbotConfig {
   logoUrl         String?
   welcomeMessage  String?
   starterPrompts  String?
+  brandColor      String? @default("#00A460")
 }

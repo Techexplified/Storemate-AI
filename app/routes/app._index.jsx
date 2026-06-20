@@ -45,12 +45,24 @@ const PRESETS = [
   },
 ];
 
+const getBrandPresets = (themeColor) => [
+  themeColor || "#00A460",
+  "#6366f1", "#f97316", "#ec4899",
+  "#14b8a6", "#8b5cf6", "#ef4444",
+  "#f43f5e", "#1f2937", "#0ea5e9",
+];
+
 export const loader = async ({ request }) => {
-  const { session } = await authenticate.admin(request);
-  const config = await db.chatbotConfig.findUnique({
-    where: { shop: session.shop },
-  });
-  return data({ config, shop: session.shop });
+  const { session, admin } = await authenticate.admin(request);
+  const config = await db.chatbotConfig.findUnique({ where: { shop: session.shop } });
+
+  let themeColor = null;
+  try {
+    const response = await admin.graphql(`{ shop { brand { colors { primary { hex } } } } }`);
+    const json = await response.json();
+    themeColor = json?.data?.shop?.brand?.colors?.primary?.[0]?.hex || null;
+  } catch (e) { }
+  return data({ config, shop: session.shop, themeColor });
 };
 
 export const action = async ({ request }) => {
@@ -88,6 +100,7 @@ export const action = async ({ request }) => {
       logoUrl: formData.get("logoUrl") || null,
       welcomeMessage: formData.get("welcomeMessage") || null,
       starterPrompts: formData.get("starterPrompts") || null,
+      brandColor: formData.get("brandColor") || "#00A460",
     },
     create: {
       shop: session.shop,
@@ -97,13 +110,14 @@ export const action = async ({ request }) => {
       logoUrl: formData.get("logoUrl") || null,
       welcomeMessage: formData.get("welcomeMessage") || null,
       starterPrompts: formData.get("starterPrompts") || null,
+      brandColor: formData.get("brandColor") || "#00A460",
     },
   });
   return data({ success: true });
 };
 
 export default function Index() {
-  const { config } = useLoaderData();
+  const { config, themeColor: fetchedThemeColor } = useLoaderData();
   const fetcher = useFetcher();
   const namesFetcher = useFetcher();
   const templateFetcher = useFetcher();
@@ -113,17 +127,22 @@ export default function Index() {
     personalityTone: config?.personalityTone || "friendly",
     avatarPreset: config?.avatarPreset || "green",
     welcomeMessage: config?.welcomeMessage || "",
+    brandColor: config?.brandColor || "#00A460",
   });
 
   const [suggestedNames, setSuggestedNames] = useState(["Aria", "Nova", "Sage", "Finn", "Luna", "Zara"]);
   const [logoUrl, setLogoUrl] = useState(config?.logoUrl || null);
   const [logoError, setLogoError] = useState(null);
-
+  const [themeColor, setThemeColor] = useState("#00A460");
   const [starterPrompts, setStarterPrompts] = useState(
     config?.starterPrompts ? JSON.parse(config.starterPrompts) : ["Where is my order?"]
   );
   const updateField = (field, value) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+  useEffect(() => {
+    if (fetchedThemeColor) setThemeColor(fetchedThemeColor);
+  }, []);
 
   useEffect(() => {
     if (namesFetcher.data?.names) setSuggestedNames(namesFetcher.data.names);
@@ -454,6 +473,74 @@ export default function Index() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Section 4 & 5 side by side */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+
+            {/* Section 4: Brand Color */}
+            <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px" }}>
+              <Text variant="headingSm" as="h2">4. Brand Color</Text>
+              <Text variant="bodySm" tone="subdued">Used in chat widget buttons and accents</Text>
+
+              {/* Swatches */}
+              <div style={{ marginTop: "14px" }}>
+                <Text variant="bodySm" tone="subdued">Preset colors</Text>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 36px)", gap: "10px", marginTop: "10px" }}>
+                  {getBrandPresets(themeColor).map((color, i) => (
+                    <div
+                      key={i}
+                      onClick={() => updateField("brandColor", color)}
+                      style={{
+                        width: "36px", height: "36px", borderRadius: "8px",
+                        backgroundColor: color, cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        outline: formData.brandColor === color ? "3px solid #00A460" : "3px solid transparent",
+                        outlineOffset: "2px",
+                      }}
+                    >
+                      {formData.brandColor === color && (
+                        <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                          <path d="M5 13l4 4L19 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hex input */}
+              <div style={{ marginTop: "16px" }}>
+                <Text variant="bodySm" tone="subdued">Custom hex value</Text>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "8px 12px" }}>
+                  <div style={{ width: "20px", height: "20px", borderRadius: "4px", backgroundColor: formData.brandColor, flexShrink: 0 }} />
+                  <input
+                    value={formData.brandColor}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateField("brandColor", val);
+                    }}
+                    onBlur={(e) => {
+                      const val = e.target.value;
+                      if (!/^#[0-9A-Fa-f]{6}$/.test(val)) updateField("brandColor", themeColor || "#00A460");
+                    }}
+                    style={{ border: "none", outline: "none", fontSize: "13px", width: "100%", fontFamily: "monospace" }}
+                  />
+                </div>
+                {formData.brandColor === themeColor && (
+                  <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "6px", color: "#00A460", fontSize: "12px" }}>
+                    <span>⊙</span> Matches your Shopify theme
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Section 5: Language — placeholder for now */}
+            <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px" }}>
+              <Text variant="headingSm" as="h2">5. Language</Text>
+              <Text variant="bodySm" tone="subdued">Coming soon</Text>
+            </div>
+
           </div>
         </div>
 
