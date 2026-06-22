@@ -49,3 +49,28 @@ model ChatbotConfig {
   capPolicies      Boolean @default(true)
   capFaqs          Boolean @default(true)
 }
+
+model MerchantConfig {
+  id             String   @id @default(cuid())
+  shop           String   @unique
+  
+  // Policies
+  returnPolicy   String?
+  shippingPolicy String?
+  
+  // Contact Info (shown on escalation)
+  supportEmail   String?
+  supportUrl     String?
+  
+  // Cache
+  productCache   String?
+  cacheSyncedAt  DateTime?
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  shop      String
+  question  String
+  answer    String
+  createdAt DateTime @default(now())
+}
