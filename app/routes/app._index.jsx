@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLoaderData, useFetcher, data } from "react-router";
+import { useLoaderData, useFetcher, data, useNavigate } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { AppProvider, Text, Banner } from "@shopify/polaris";
@@ -139,6 +139,7 @@ export default function Index() {
   const fetcher = useFetcher();
   const namesFetcher = useFetcher();
   const templateFetcher = useFetcher();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     botName: config?.botName || "Aria",
@@ -747,6 +748,7 @@ export default function Index() {
           🖫 {fetcher.state !== "idle" ? "Saving..." : "Save draft"}
         </button>
         <button
+          onClick={() => navigate("/app/capabilities")}
           style={{ backgroundColor: "#00A460", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}
         >
           Continue →

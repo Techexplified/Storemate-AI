@@ -44,4 +44,8 @@ model ChatbotConfig {
   starterPrompts  String?
   brandColor      String? @default("#00A460")
   language        String? @default("en")
+  capProducts      Boolean @default(true)
+  capOrderTracking Boolean @default(true)
+  capPolicies      Boolean @default(true)
+  capFaqs          Boolean @default(true)
 }
