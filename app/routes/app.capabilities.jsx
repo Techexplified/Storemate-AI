@@ -1,45 +1,44 @@
-import { useLoaderData, useFetcher, useNavigate } from "react-router";
+import { useLoaderData, useFetcher, useNavigate, redirect, data } from "react-router";
 import { authenticate } from "../shopify.server";
 import { AppProvider, Text, Banner } from "@shopify/polaris";
-import { data } from "react-router";
 import db from "../db.server";
 import { useState } from "react";
 
 const ICONS = {
-  capProducts: (
-    <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00A460" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-    </div>
-  ),
-  capOrderTracking: (
-    <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00A460" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="3" width="15" height="13" rx="1"/>
-        <path d="M16 8h4l3 5v3h-7V8z"/>
-        <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
-      </svg>
-    </div>
-  ),
-  capPolicies: (
-    <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00A460" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-        <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/>
-      </svg>
-    </div>
-  ),
-  capFaqs: (
-    <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00A460" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-        <path d="M9 10h.01M12 10c0-1.1.9-2 2-2s2 .9 2 2-2 3-2 3"/>
-      </svg>
-    </div>
-  ),
+    capProducts: (
+        <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00A460" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+        </div>
+    ),
+    capOrderTracking: (
+        <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00A460" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="1" />
+                <path d="M16 8h4l3 5v3h-7V8z" />
+                <circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
+            </svg>
+        </div>
+    ),
+    capPolicies: (
+        <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00A460" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="12" y2="17" />
+            </svg>
+        </div>
+    ),
+    capFaqs: (
+        <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00A460" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                <path d="M9 10h.01M12 10c0-1.1.9-2 2-2s2 .9 2 2-2 3-2 3" />
+            </svg>
+        </div>
+    ),
 };
 
 
@@ -77,6 +76,10 @@ const CAPABILITIES = [
 export const loader = async ({ request }) => {
     const { session } = await authenticate.admin(request);
     const config = await db.chatbotConfig.findUnique({ where: { shop: session.shop } });
+
+    const url = new URL(request.url);
+    if (config && url.searchParams.get("mode") !== "edit") return redirect("/app/dashboard");
+
     return data({ config });
 };
 
@@ -121,7 +124,7 @@ export default function Capabilities() {
             Object.fromEntries(Object.entries(selected).map(([k, v]) => [k, String(v)])),
             { method: "POST" }
         );
-        if (andContinue) navigate("/app/widget"); // update when Step 3 route is known
+        if (andContinue) navigate("/app/dashboard");
     };
 
     const enabledCount = Object.values(selected).filter(Boolean).length;

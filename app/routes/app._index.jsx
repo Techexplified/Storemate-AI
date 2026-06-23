@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLoaderData, useFetcher, data, useNavigate } from "react-router";
+import { useLoaderData, useFetcher, data, useNavigate, redirect } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { AppProvider, Text, Banner } from "@shopify/polaris";
@@ -72,12 +72,15 @@ export const loader = async ({ request }) => {
   const { session, admin } = await authenticate.admin(request);
   const config = await db.chatbotConfig.findUnique({ where: { shop: session.shop } });
 
+  const url = new URL(request.url);
+  if (config && url.searchParams.get("mode") !== "edit") return redirect("/app/dashboard");
+
   let themeColor = null;
   try {
     const response = await admin.graphql(`{ shop { brand { colors { primary { hex } } } } }`);
     const json = await response.json();
     themeColor = json?.data?.shop?.brand?.colors?.primary?.[0]?.hex || null;
-  } catch (e) { }
+  } catch (e) {}
   return data({ config, shop: session.shop, themeColor });
 };
 

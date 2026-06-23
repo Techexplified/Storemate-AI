@@ -86,6 +86,8 @@ model Conversation {
   role      String
   message   String
   createdAt DateTime @default(now())
+  customerName  String?  @default("Guest")
+  customerEmail String?
 
   @@index([shop])
 }

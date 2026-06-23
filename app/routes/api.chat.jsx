@@ -39,11 +39,11 @@ function formatOrderReply(order, botName) {
   return reply;
 }
 
-async function logMessages(shop, sessionId, userMessage, assistantReply) {
+async function logMessages(shop, sessionId, customerName, customerEmail, userMessage, assistantReply) {
   await db.conversation.createMany({
     data: [
-      { shop, sessionId, role: "user", message: userMessage },
-      { shop, sessionId, role: "assistant", message: assistantReply },
+      { shop, sessionId, customerName, customerEmail, role: "user", message: userMessage },
+      { shop, sessionId, customerName, customerEmail: null, role: "assistant", message: assistantReply },
     ],
   });
 }
@@ -53,7 +53,7 @@ export const action = async ({ request }) => {
   if (request.method !== "POST") return data({ error: "Method not allowed" }, { status: 405, headers: HEADERS });
 
   try {
-    const { shop, messages, sessionId } = await request.json();
+    const { shop, messages, sessionId, customerName = "Guest", customerEmail = null } = await request.json();
     if (!shop || !messages?.length || !sessionId) return data({ error: "Missing fields" }, { status: 400, headers: HEADERS });
 
 
@@ -68,7 +68,7 @@ export const action = async ({ request }) => {
       if (orderNumber && email) {
         const order = await lookupOrder(shop, orderNumber, email);
         const reply = formatOrderReply(order, config.botName);
-        await logMessages(shop, sessionId, lastMessage, reply);
+        await logMessages(shop, sessionId, customerName, customerEmail, lastMessage, reply);
         return data({ reply }, { headers: HEADERS });
       }
     }
@@ -76,7 +76,7 @@ export const action = async ({ request }) => {
     // Gemini
     const systemPrompt = await buildSystemPrompt(shop, null, config);
     const reply = await chat(messages, systemPrompt);
-    await logMessages(shop, sessionId, messages[messages.length - 1].content, reply);
+    await logMessages(shop, sessionId, customerName, customerEmail, messages[messages.length - 1].content, reply);
     return data({ reply }, { headers: HEADERS });
 
   } catch (e) {
