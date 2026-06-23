@@ -87,31 +87,26 @@ export async function buildSystemPrompt(shop, admin, config) {
     productText = merchant?.productCache || "";
   }
 
-  const faqs = await db.faq.findMany({ where: { shop } });
-  const faqText = faqs.length
-    ? faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n")
-    : "";
+  const faqs = config.capFaqs ? await db.faq.findMany({ where: { shop } }) : [];
+  const faqText = faqs.length ? faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n") : "";
+
+  const policies = config.capPolicies ? await db.policy.findMany({ where: { shop } }) : [];
+  const policyText = policies.length ? policies.map(p => `${p.name}:\n${p.text}`).join("\n\n") : "";
 
   return `
 You are ${config.botName}, a helpful store assistant. Tone: ${config.personalityTone}.
 ${config.language ? `Always respond in: ${config.language}` : ""}
 
-${productText ? `PRODUCTS:\n${productText}` : ""}
-${merchant?.returnPolicy ? `RETURN POLICY:\n${merchant.returnPolicy}` : ""}
-${merchant?.shippingPolicy ? `SHIPPING POLICY:\n${merchant.shippingPolicy}` : ""}
+${config.capProducts && productText ? `PRODUCTS:\n${productText}` : ""}
+${policyText ? `POLICIES:\n${policyText}` : ""}
 ${faqText ? `FAQs:\n${faqText}` : ""}
 ${merchant?.supportEmail || merchant?.supportUrl ? `SUPPORT CONTACT:\nEmail: ${merchant.supportEmail || "N/A"} | URL: ${merchant.supportUrl || "N/A"}` : ""}
 
-If you can't answer, direct the customer to the support contact above.
-`.trim();
-}
+${!config.capProducts ? `Do NOT answer product questions. Tell customer you cannot help with that.` : ""}
+${!config.capPolicies ? `Do NOT answer policy, shipping or returns questions. Tell customer you cannot help with that.` : ""}
+${!config.capFaqs ? `Do NOT answer FAQ questions. Tell customer you cannot help with that.` : ""}
+${!config.capOrderTracking ? `Do NOT help with order tracking. Tell customer you cannot help with that.` : ""}
 
-export async function syncProducts(shop, admin) {
-  const productText = await fetchProducts(admin);
-  await db.merchantConfig.upsert({
-    where: { shop },
-    update: { productCache: productText, cacheSyncedAt: new Date() },
-    create: { shop, productCache: productText, cacheSyncedAt: new Date() },
-  });
-  return productText;
+If you cannot answer, direct the customer to support: Email: ${merchant?.supportEmail || "N/A"} | URL: ${merchant?.supportUrl || "N/A"}
+`.trim();
 }

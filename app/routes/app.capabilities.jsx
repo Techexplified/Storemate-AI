@@ -238,7 +238,7 @@ export default function Capabilities() {
                         disabled={enabledCount === 0}
                         style={{ backgroundColor: enabledCount === 0 ? "#9ca3af" : "#00A460", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: enabledCount === 0 ? "not-allowed" : "pointer" }}
                     >
-                        Continue →
+                        Finish →
                     </button>
                 </div>
             </div>

@@ -39,13 +39,23 @@ function formatOrderReply(order, botName) {
   return reply;
 }
 
+async function logMessages(shop, sessionId, userMessage, assistantReply) {
+  await db.conversation.createMany({
+    data: [
+      { shop, sessionId, role: "user", message: userMessage },
+      { shop, sessionId, role: "assistant", message: assistantReply },
+    ],
+  });
+}
+
 export const action = async ({ request }) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: HEADERS });
   if (request.method !== "POST") return data({ error: "Method not allowed" }, { status: 405, headers: HEADERS });
 
   try {
-    const { shop, messages } = await request.json();
-    if (!shop || !messages?.length) return data({ error: "Missing shop or messages" }, { status: 400, headers: HEADERS });
+    const { shop, messages, sessionId } = await request.json();
+    if (!shop || !messages?.length || !sessionId) return data({ error: "Missing fields" }, { status: 400, headers: HEADERS });
+
 
     const config = await db.chatbotConfig.findUnique({ where: { shop } });
     if (!config) return data({ error: "Chatbot not configured" }, { status: 404, headers: HEADERS });
@@ -58,13 +68,15 @@ export const action = async ({ request }) => {
       if (orderNumber && email) {
         const order = await lookupOrder(shop, orderNumber, email);
         const reply = formatOrderReply(order, config.botName);
+        await logMessages(shop, sessionId, lastMessage, reply);
         return data({ reply }, { headers: HEADERS });
       }
     }
 
-    // Everything else → Gemini
+    // Gemini
     const systemPrompt = await buildSystemPrompt(shop, null, config);
     const reply = await chat(messages, systemPrompt);
+    await logMessages(shop, sessionId, messages[messages.length - 1].content, reply);
     return data({ reply }, { headers: HEADERS });
 
   } catch (e) {
