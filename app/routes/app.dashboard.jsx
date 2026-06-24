@@ -51,16 +51,52 @@ export const loader = async ({ request }) => {
     // Theme embed check
     let isEmbedded = false;
     try {
-        const response = await admin.graphql(`
+        // 1. Get the active main theme ID
+        const themeResponse = await admin.graphql(`
+    query {
+      themes(first: 1, roles: [MAIN]) {
+        nodes {
+          id
+        }
+      }
+    }
+  `);
+        const themeData = await themeResponse.json();
+        const mainThemeId = themeData?.data?.themes?.nodes[0]?.id;
+
+        if (mainThemeId) {
+            // 2. Fetch its settings_data file 
+            const assetResponse = await admin.graphql(`
       query {
-        currentAppInstallation {
-          embeddedInStructure
+        theme(id: "${mainThemeId}") {
+          files(filenames: ["config/settings_data.json"], first: 1) {
+            nodes {
+              body {
+                ... on OnlineStoreThemeFileBodyText {
+                  content
+                }
+              }
+            }
+          }
         }
       }
     `);
-        const resJson = await response.json();
-        isEmbedded = resJson?.data?.currentAppInstallation?.embeddedInStructure ?? false;
-    } catch (_) { }
+            const assetData = await assetResponse.json();
+            const rawContent = assetData?.data?.theme?.files?.nodes[0]?.body?.content;
+
+            if (rawContent) {
+                const parsedSettings = JSON.parse(rawContent);
+                const blocks = parsedSettings?.current?.blocks || {};
+
+                // 3. Scan the blocks to see if your store-mate extension is present and NOT disabled
+                isEmbedded = Object.values(blocks).some(
+                    (block) => block.type?.includes("store-mate") && block.disabled === false
+                );
+            }
+        }
+    } catch (_) {
+        isEmbedded = false;
+    }
 
     const supportLinksAdded = !!(merchantConfig?.supportEmail || merchantConfig?.supportUrl);
 
