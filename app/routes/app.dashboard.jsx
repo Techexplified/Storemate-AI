@@ -51,50 +51,51 @@ export const loader = async ({ request }) => {
     // Theme embed check
     let isEmbedded = false;
     try {
-        // 1. Get the active main theme ID
+        // 1. Get the active theme
         const themeResponse = await admin.graphql(`
     query {
-      themes(first: 1, roles: [MAIN]) {
-        nodes {
-          id
-        }
+      themes(first: 10) {
+        nodes { id role }
       }
     }
   `);
         const themeData = await themeResponse.json();
-        const mainThemeId = themeData?.data?.themes?.nodes[0]?.id;
+        const themes = themeData?.data?.themes?.nodes || [];
+        const mainTheme = themes.find(t => t.role === "MAIN");
 
-        if (mainThemeId) {
-            // 2. Fetch its settings_data file 
+        if (mainTheme) {
+            // 2. Fetch config utilizing correct query variable structure
             const assetResponse = await admin.graphql(`
-      query {
-        theme(id: "${mainThemeId}") {
+      query getThemeFile($id: ID!) {
+        theme(id: $id) {
           files(filenames: ["config/settings_data.json"], first: 1) {
             nodes {
               body {
-                ... on OnlineStoreThemeFileBodyText {
-                  content
-                }
+                ... on OnlineStoreThemeFileBodyText { content }
               }
             }
           }
         }
       }
-    `);
+    `, { variables: { id: mainTheme.id } });
+
             const assetData = await assetResponse.json();
-            const rawContent = assetData?.data?.theme?.files?.nodes[0]?.body?.content;
+            const rawContent = assetData?.data?.theme?.files?.nodes?.[0]?.body?.content ?? "";
 
             if (rawContent) {
-                const parsedSettings = JSON.parse(rawContent);
+                // 3. Strip out the Shopify comments block so JSON.parse doesn't crash
+                const cleaned = rawContent.replace(/\/\*[\s\S]*?\*\//, "");
+                const parsedSettings = JSON.parse(cleaned);
                 const blocks = parsedSettings?.current?.blocks || {};
 
-                // 3. Scan the blocks to see if your store-mate extension is present and NOT disabled
+                // 4. Track extension status targeting the liquid file name
                 isEmbedded = Object.values(blocks).some(
-                    (block) => block.type?.includes("storemate") && block.disabled === false
+                    (block) => block?.type?.includes("blocks/embed") && block?.disabled !== true
                 );
             }
         }
-    } catch (_) {
+    } catch (e) {
+        console.error("Embed verification failed:", e);
         isEmbedded = false;
     }
 
