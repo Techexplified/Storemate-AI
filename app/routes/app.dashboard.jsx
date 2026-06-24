@@ -17,11 +17,16 @@ export const loader = async ({ request }) => {
     const days = rangeMap[range] || 7;
     const since = new Date(Date.now() - days * 86400000);
 
-    const [conversations, config, merchantConfig, faqs, policies] = await Promise.all([
+    const [conversations, allMessages, config, merchantConfig, faqs, policies] = await Promise.all([
         db.conversation.findMany({
             where: { shop, role: "user", createdAt: { gte: since } },
             orderBy: { createdAt: "desc" },
             take: 50,
+        }),
+        db.conversation.findMany({
+            where: { shop, createdAt: { gte: since } },
+            orderBy: { createdAt: "asc" },
+            take: 500,
         }),
         db.chatbotConfig.findUnique({ where: { shop } }),
         db.merchantConfig.findUnique({ where: { shop } }),
@@ -61,6 +66,7 @@ export const loader = async ({ request }) => {
 
     return data({
         conversations,
+        allMessages,
         topQuestions,
         range,
         config,
@@ -151,12 +157,12 @@ export const action = async ({ request }) => {
 };
 
 export default function Dashboard() {
-    const { conversations, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl } = useLoaderData();
+    const { conversations, allMessages, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl } = useLoaderData();
     const [searchParams, setSearchParams] = useSearchParams();
     const { revalidate } = useRevalidator();
     const navigate = useNavigate();
     const [showBanner, setShowBanner] = useState(false);
-
+    const [selectedSession, setSelectedSession] = useState(null);
     const [activePanel, setActivePanel] = useState(null); // 'support' | 'faqs' | 'policies'
     const [supportEmail, setSupportEmail] = useState(merchantConfig?.supportEmail || "");
     const [supportUrl, setSupportUrl] = useState(merchantConfig?.supportUrl || "");
@@ -336,7 +342,7 @@ export default function Dashboard() {
                                             <td>
                                                 <button
                                                     className="conv-view-btn"
-                                                    onClick={() => navigate(`/app/conversation/${c.sessionId}`)}
+                                                    onClick={() => setSelectedSession(c.sessionId)}
                                                 >
                                                     View ↗
                                                 </button>
@@ -600,6 +606,33 @@ export default function Dashboard() {
                         </div>
                     )}
                 </div>
+                {/* CONVERSATION DRAWER */}
+                {selectedSession && (
+                    <div className="conv-drawer-overlay" onClick={() => setSelectedSession(null)}>
+                        <div className="conv-drawer" onClick={e => e.stopPropagation()}>
+                            <div className="conv-drawer-header">
+                                <div>
+                                    <div className="conv-drawer-title">Conversation</div>
+                                    <div className="conv-drawer-sub">Session: {selectedSession}</div>
+                                </div>
+                                <button className="setup-panel-close" onClick={() => setSelectedSession(null)}>✕</button>
+                            </div>
+                            <div className="conv-drawer-messages">
+                                {allMessages
+                                    .filter(c => c.sessionId === selectedSession)
+                                    .map(c => (
+                                        <div key={c.id} className={`conv-bubble-wrap ${c.role === "user" ? "bubble-user" : "bubble-ai"}`}>
+                                            <div className={`conv-bubble ${c.role === "user" ? "bubble-user-msg" : "bubble-ai-msg"}`}>
+                                                {c.message}
+                                            </div>
+                                            <div className="bubble-time">{timeAgo(c.createdAt)}</div>
+                                        </div>
+                                    ))
+                                }
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <style>{`
@@ -1010,6 +1043,53 @@ export default function Dashboard() {
   background: #ffebe9;
   color: #cc1f1f;
 }
+.conv-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 100;
+    display: flex;
+    justify-content: flex-end;
+}
+.conv-drawer {
+    width: 420px;
+    height: 100%;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+}
+.conv-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.conv-drawer-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+.conv-drawer-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.conv-drawer-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.conv-bubble-wrap { display: flex; flex-direction: column; }
+.bubble-user { align-items: flex-end; }
+.bubble-ai { align-items: flex-start; }
+.conv-bubble {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+.bubble-user-msg { background: #00A460; color: #fff; border-bottom-right-radius: 3px; }
+.bubble-ai-msg { background: #f3f4f6; color: #1a1a1a; border-bottom-left-radius: 3px; }
+.bubble-time { font-size: 10px; color: #9ca3af; margin-top: 3px; padding: 0 4px; }
       `}</style>
         </AppProvider>
     );
