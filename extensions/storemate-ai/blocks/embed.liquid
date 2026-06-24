@@ -1,6 +1,13 @@
+<script>
+  window.__storeMate = {
+    shop: {{ shop.permanent_domain | json }},
+    appUrl: "https://storemate-ai.vercel.app"
+  };
+</script>
+
 {% schema %}
 {
-  "name": "StoreMate Chat Widget",
+  "name": "Storemate Widget",
   "target": "body"
 }
 {% endschema %}
