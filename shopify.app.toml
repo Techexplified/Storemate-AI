@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "298bf5a49f2cc378250b61dc3be9e0c9"
-application_url = "https://example.com"
+application_url = "https://storemate-ai.vercel.app"
 embedded = true
 name = "Storemate AI"
 
@@ -45,8 +45,10 @@ api_version = "2026-07"
   topics = [ "app/scopes_update" ]
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ 
+  "https://storemate-ai.vercel.app/auth/callback",
+  "https://storemate-ai.vercel.app/auth/shopify/callback"
+ ]
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
