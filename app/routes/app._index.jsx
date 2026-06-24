@@ -80,7 +80,7 @@ export const loader = async ({ request }) => {
     const response = await admin.graphql(`{ shop { brand { colors { primary { hex } } } } }`);
     const json = await response.json();
     themeColor = json?.data?.shop?.brand?.colors?.primary?.[0]?.hex || null;
-  } catch (e) {}
+  } catch (e) { }
   return data({ config, shop: session.shop, themeColor });
 };
 
@@ -134,6 +134,15 @@ export const action = async ({ request }) => {
       language: formData.get("language") || "en",
     },
   });
+
+  if (intent === "saveAndContinue") {
+    return redirect(`/app/capabilities?mode=edit`);
+  }
+
+  if (intent === "save") {
+    return data({ success: true });
+  }
+
   return data({ success: true });
 };
 
@@ -742,7 +751,7 @@ export default function Index() {
       </div>
 
       {/* Bottom bar */}
-      <div style={{  bottom: "0", padding: "16px 24px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px", zIndex: 10 }}>
+      <div style={{ bottom: "0", padding: "16px 24px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px", zIndex: 10 }}>
         <button
           onClick={handleSave}
           disabled={fetcher.state !== "idle"}
@@ -751,7 +760,12 @@ export default function Index() {
           🖫 {fetcher.state !== "idle" ? "Saving..." : "Save draft"}
         </button>
         <button
-          onClick={() => navigate("/app/capabilities?mode=edit")}
+          onClick={() => fetcher.submit({
+            intent: "saveAndContinue",
+            ...formData,
+            logoUrl: logoUrl || "",
+            starterPrompts: JSON.stringify(starterPrompts),
+          }, { method: "POST" })}
           style={{ backgroundColor: "#00A460", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}
         >
           Continue →

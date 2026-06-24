@@ -90,7 +90,7 @@ export const loader = async ({ request }) => {
 
                 // 4. Track extension status targeting the liquid file name
                 isEmbedded = Object.values(blocks).some(
-                    (block) => block?.type?.includes("blocks/embed") && block?.disabled !== true
+                    (block) => block?.type?.includes("storemate") && block?.disabled !== true
                 );
             }
         }
