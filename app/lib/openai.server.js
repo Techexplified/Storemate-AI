@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const CHAT_MODEL = "gemini-2.5-flash";
+const CHAT_MODEL = "gemini-2.0-flash";
 const EMBED_MODEL = "text-embedding-004";
 
 export async function chat(messages, systemPrompt = null) {
