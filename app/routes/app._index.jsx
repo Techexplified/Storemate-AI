@@ -73,7 +73,7 @@ export const loader = async ({ request }) => {
   const config = await db.chatbotConfig.findUnique({ where: { shop: session.shop } });
 
   const url = new URL(request.url);
-  if (config && url.searchParams.get("mode") !== "edit") return redirect("/app/dashboard");
+  if (config && url.searchParams.get("mode") !== "edit") return redirect(`/app/dashboard?${url.searchParams.toString()}`);
 
   let themeColor = null;
   try {
@@ -751,7 +751,7 @@ export default function Index() {
           🖫 {fetcher.state !== "idle" ? "Saving..." : "Save draft"}
         </button>
         <button
-          onClick={() => navigate("/app/capabilities")}
+          onClick={() => navigate("/app/capabilities?mode=edit")}
           style={{ backgroundColor: "#00A460", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}
         >
           Continue →

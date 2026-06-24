@@ -69,6 +69,16 @@ export async function lookupOrder(shop, orderNumber, email) {
   };
 }
 
+export async function syncProducts(shop, admin) {
+  const productText = await fetchProducts(admin);
+  await db.merchantConfig.upsert({
+    where: { shop },
+    update: { productCache: productText, cacheSyncedAt: new Date() },
+    create: { shop, productCache: productText, cacheSyncedAt: new Date() },
+  });
+  return productText;
+}
+
 export async function buildSystemPrompt(shop, admin, config) {
   let productText = "";
   const merchant = await db.merchantConfig.findUnique({ where: { shop } });
