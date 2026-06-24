@@ -8,6 +8,14 @@ const HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
+export const loader = async ({ request }) => {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: HEADERS });
+  }
+  return new Response(null, { status: 405, headers: HEADERS });
 };
 
 function extractOrderInfo(message) {
