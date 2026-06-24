@@ -90,7 +90,7 @@ export const loader = async ({ request }) => {
 
                 // 3. Scan the blocks to see if your store-mate extension is present and NOT disabled
                 isEmbedded = Object.values(blocks).some(
-                    (block) => block.type?.includes("store-mate") && block.disabled === false
+                    (block) => block.type?.includes("storemate") && block.disabled === false
                 );
             }
         }
