@@ -132,7 +132,7 @@
 
     const logoHtml = config.logoUrl
       ? `<img src="${esc(config.logoUrl)}" alt="logo" />`
-      : `<span style="font-size:18px;">AVATARS[${config.avatarPreset}]</span>`;
+      : AVATARS[config.avatarPreset] || AVATARS.green;
 
     container.innerHTML = `
       <button id="sm-fab">${logoHtml}</button>
@@ -210,11 +210,13 @@
       leadCaptured = true;
       document.getElementById('sm-lead-popup').style.display = 'none';
     });
+
+    document.getElementById('sm-lead-popup-skip').addEventListener('click', () => {
+      document.getElementById('sm-lead-popup').style.display = 'none'
+    })
+
   }
 
-  document.getElementById('sm-lead-popup-skip').addEventListener('click', () => {
-    document.getElementById('sm-lead-popup').style.display = 'none'
-  })
 
   function triggerLeadCapture(delay) {
     if (leadCaptured) return;
