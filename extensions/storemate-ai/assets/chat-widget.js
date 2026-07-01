@@ -29,7 +29,7 @@
   // --- INITIALIZE ---
   async function init() {
     try {
-      const response = await fetch(`${appUrl}/api/widget-config?shop=${shop}`);
+      const response = await fetch(`${appUrl}/api/config?shop=${shop}`);
       const data = await response.json();
       config = data.config || { botName: "Aria", brandColor: "#00A460", capFaqs: true };
       injectStyles();
