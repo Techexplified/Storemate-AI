@@ -31,7 +31,7 @@
     try {
       const response = await fetch(`${appUrl}/api/config?shop=${shop}`);
       const data = await response.json();
-      config = data.config || { botName: "Aria", brandColor: "#00A460", capFaqs: true };
+      config = data || { botName: "Aria", brandColor: "#00A460", capFaqs: true };
       injectStyles();
       renderWidget();
     } catch (e) {
@@ -64,6 +64,7 @@
       .sm-lead-content { background: white; padding: 20px; border-radius: 8px; width: 100%; text-align: center; }
       .sm-lead-content input { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
       .sm-lead-content button { width: 100%; padding: 10px; background: ${config?.brandColor || '#00A460'}; color: white; border: none; border-radius: 4px; cursor: pointer; }
+      #sm-lead-popup-skip { width: 100%; padding: 10px; background: #a6a6ac; color: #050505; border: none; border-radius: 4px; cursor: pointer;}
       .sm-indicator { font-style: italic; color: #8e8e93; }
       .sm-faq-item { background: white; padding: 10px; margin-bottom: 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
       .sm-faq-q { font-weight: bold; margin-bottom: 4px; font-size: 14px; }
@@ -79,9 +80,59 @@
     const container = document.createElement('div');
     container.id = 'sm-widget';
 
+    const AVATARS = {
+      green: `
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="20" cy="15" r="7" fill="white"/>
+  <path d="M6 36c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="white"/>
+</svg>`,
+
+      blue: `
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="20" cy="20" r="14" stroke="white" stroke-width="2.5"/>
+  <circle cx="15" cy="17" r="2" fill="white"/>
+  <circle cx="25" cy="17" r="2" fill="white"/>
+  <path d="M13 24c1.5 3 12.5 3 14 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+</svg>`,
+
+      yellow: `
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20 5l3.9 8.26L33 14.6l-6.5 6.33 1.53 8.94L20 25.5l-8.03 4.37 1.53-8.94L7 14.6l9.1-1.34L20 5z" fill="white"/>
+</svg>`,
+
+      pink: `
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20 34s-14-9.35-14-19a8 8 0 0116 0 8 8 0 0116 0c0 9.65-14 19-14 19z" fill="white"/>
+</svg>`,
+
+      teal: `
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="14" width="20" height="16" rx="3" fill="white"/>
+  <rect x="15" y="19" width="4" height="4" rx="1" fill="#14b8a6"/>
+  <rect x="21" y="19" width="4" height="4" rx="1" fill="#14b8a6"/>
+  <path d="M20 8v6" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="20" cy="7" r="2" fill="white"/>
+  <path d="M13 30v3M27 30v3" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+</svg>`,
+
+      indigo: `
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 20c2-6 4-6 6 0s4 6 6 0 4-6 6 0 4 6 6 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+</svg>`,
+
+      orange: `
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20 7a11 11 0 00-11 11c0 4.5 2.5 8 6 10v4h10v-4c3.5-2 6-5.5 6-10A11 11 0 0020 7z" fill="white"/>
+  <circle cx="15" cy="18" r="2.5" fill="#f97316"/>
+  <circle cx="25" cy="18" r="2.5" fill="#f97316"/>
+  <path d="M17 30h6M17 33h6" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/>
+</svg>`
+    };
+
+
     const logoHtml = config.logoUrl
       ? `<img src="${esc(config.logoUrl)}" alt="logo" />`
-      : `<span style="font-size:18px;">🤖</span>`;
+      : `<span style="font-size:18px;">AVATARS[${config.avatarPreset}]</span>`;
 
     container.innerHTML = `
       <button id="sm-fab">${logoHtml}</button>
@@ -113,6 +164,7 @@
             <p>Please drop your info so we can reach out if needed!</p>
             <input type="text" id="sm-lead-name" placeholder="Your Name">
             <input type="email" id="sm-lead-email" placeholder="Your Email">
+            <button id="sm-lead-popup-skip">Skip</button>
             <button id="sm-lead-submit">Continue</button>
           </div>
         </div>
@@ -159,6 +211,10 @@
       document.getElementById('sm-lead-popup').style.display = 'none';
     });
   }
+
+  document.getElementById('sm-lead-popup-skip').addEventListener('click', () => {
+    document.getElementById('sm-lead-popup').style.display = 'none'
+  })
 
   function triggerLeadCapture(delay) {
     if (leadCaptured) return;
