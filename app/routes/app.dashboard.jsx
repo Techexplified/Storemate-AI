@@ -42,6 +42,15 @@ export const loader = async ({ request }) => {
         db.policy.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
     ]);
 
+    const escalatedSessions = new Set(
+        allMessages
+            .filter(m => m.role == "assistant" && (
+                (merchantConfig?.supportEmail && m.message.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
+                (merchantConfig?.supportUrl && m.message.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()))
+            ))
+            .map(m => m.sessionId)
+    )
+
     // Most asked questions
     const freq = {};
     for (const { message } of conversations) {
@@ -112,6 +121,7 @@ export const loader = async ({ request }) => {
     return data({
         conversations,
         allMessages,
+        escalatedSessions,
         topQuestions,
         range,
         config,
@@ -248,7 +258,7 @@ function Deletemodal({ intent, sessionId, onClose }) {
 }
 
 export default function Dashboard() {
-    const { conversations, allMessages, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl } = useLoaderData();
+    const { conversations, allMessages, escalatedSessions, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl } = useLoaderData();
     const [searchParams, setSearchParams] = useSearchParams();
     const { revalidate } = useRevalidator();
     const navigate = useNavigate();
@@ -410,9 +420,7 @@ export default function Dashboard() {
                             </thead>
                             <tbody>
                                 {conversations.slice(0, 10).map(c => {
-                                    const isEscalated =
-                                        (merchantConfig?.supportEmail && c.message?.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
-                                        (merchantConfig?.supportUrl && c.message?.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()));
+                                    const isEscalated = escalatedSessions.has(c.sessionId);
 
                                     return (
                                         <tr key={c.id}>
