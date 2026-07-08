@@ -7,8 +7,14 @@ import { AppProvider, Text, Banner } from "@shopify/polaris";
 import enTranslations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
 
-const TrashIcon = () => <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-current stroke-2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" /></svg>;
-
+const TrashIcon = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="3 6 5 6 21 6" />
+        <path d="M19 6l-1 14H6L5 6" />
+        <path d="M10 11v6M14 11v6" />
+        <path d="M9 6V4h6v2" />
+    </svg>
+);
 export const loader = async ({ request }) => {
     const { session, admin } = await authenticate.admin(request);
     const shop = session.shop;
@@ -1287,6 +1293,74 @@ export default function Dashboard() {
     cursor: pointer;
 }
 .modal-btn-delete:hover { background: #b91c1c; }
+/* Update Card Styling for Premium Look */
+.dash-card {
+  background: #fff;
+  border: 1px solid #f3f4f6; /* Softer border */
+  border-radius: 12px; /* Slightly rounder */
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02); /* Soft shadow */
+  transition: box-shadow 0.2s ease;
+}
+.dash-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+}
+
+/* Refine Table Headers */
+.conv-table th {
+  text-align: left;
+  font-weight: 600;
+  color: #8c929d;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 12px 14px 0;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+/* Improve Table Rows & Add Hover State */
+.conv-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+.conv-table tbody tr:hover td {
+  background-color: #fafafa;
+}
+.conv-table td {
+  padding: 16px 12px 16px 0;
+  border-bottom: 1px solid #f9fafb;
+  vertical-align: middle;
+}
+
+/* Refine Standard Buttons */
+.conv-view-btn {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #374151;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  transition: all 0.15s ease;
+}
+.conv-view-btn:hover { 
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* Make Store Readiness "Manage" Button Green */
+.readiness-status-btn.status-done {
+  background: #00A460;
+  color: #fff;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.readiness-status-btn.status-done:hover {
+  background: #008f54;
+}
       `}</style>
         </AppProvider>
     );
