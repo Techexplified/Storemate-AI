@@ -532,12 +532,12 @@ export default function Dashboard() {
                         <div className="dash-card-title" style={{ marginBottom: 12 }}>Quick Actions</div>
                         <div className="quick-actions">
                             <button className="qa-btn" onClick={() => navigate("/app?mode=edit")}>✎ Customize Chatbot</button>
-                            <button className="qa-btn" onClick={() => {
+                            {/* <button className="qa-btn" onClick={() => {
                                 fetcher.submit({}, { method: "POST", action: "/api/sync" });
                                 revalidate();
                             }}>
                                 {fetcher.state === "submitting" ? "Syncing..." : "↻ Sync Products"}
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 </div>
