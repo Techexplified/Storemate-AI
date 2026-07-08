@@ -210,21 +210,35 @@ export const action = async ({ request }) => {
     return data({ ok: false });
 };
 
-function Deletemodal({intent,sessionId}){
+function Deletemodal({ intent, sessionId, onClose }) {
     const fetcher = useFetcher();
+
     const deleteconvos = () => {
-        fetcher.submit({ intent: intent,  id: sessionId }, { method: "POST" })
-    }
-return (
-    // entire modal card
-    <div>
-        <div>
-            <h3>{ intent === "delete-convo" ? "Delete the conversation?" : "Delete all conversations?"}</h3>
-            <button>Cancel</button>
-            <button onClick={deleteconvos}>Delete</button>
+        const payload = { intent };
+        if (sessionId) payload.sessionId = sessionId;
+
+        fetcher.submit(payload, { method: "POST" });
+        onClose();
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <h3 className="modal-title">
+                    {intent === "delete-convo" ? "Delete this conversation?" : "Delete all conversations?"}
+                </h3>
+                <p className="modal-desc">
+                    {intent === "delete-convo"
+                        ? "Are you sure you want to delete this conversation? This action cannot be undone."
+                        : "Are you sure you want to clear your entire conversation history? This action cannot be undone."}
+                </p>
+                <div className="modal-actions">
+                    <button className="modal-btn-cancel" onClick={onClose}>Cancel</button>
+                    <button className="modal-btn-delete" onClick={deleteconvos}>Delete</button>
+                </div>
+            </div>
         </div>
-    </div>
-)
+    );
 }
 
 export default function Dashboard() {
@@ -242,6 +256,7 @@ export default function Dashboard() {
     const [policyName, setPolicyName] = useState("");
     const [policyText, setPolicyText] = useState("");
     const fetcher = useFetcher();
+    const [deleteModalConfig, setDeleteModalConfig] = useState({ isOpen: false, intent: "", sessionId: null });
 
     // Show banner if not embedded — dismiss resets on every app open (no localStorage)
     useEffect(() => {
@@ -364,8 +379,15 @@ export default function Dashboard() {
                             <div className="dash-card-title">Recent Conversations</div>
                             <div className="dash-card-subtitle">Latest customer interactions handled by your AI</div>
                         </div>
+                        {conversations.length > 0 && (
+                            <button
+                                className="dash-btn-danger"
+                                onClick={() => setDeleteModalConfig({ isOpen: true, intent: "delete-all", sessionId: null })}
+                            >
+                                Clear History
+                            </button>
+                        )}
                     </div>
-
                     {conversations.length === 0 ? (
                         <div className="dash-empty">No conversations yet in this period.</div>
                     ) : (
@@ -377,6 +399,7 @@ export default function Dashboard() {
                                     <th>Status</th>
                                     <th>Time</th>
                                     <th>Action</th>
+                                    <th>Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -416,6 +439,15 @@ export default function Dashboard() {
                                                     onClick={() => setSelectedSession(c.sessionId)}
                                                 >
                                                     View ↗
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    className="conv-delete-row-btn"
+                                                    title="Delete conversation"
+                                                    onClick={() => setDeleteModalConfig({ isOpen: true, intent: "delete-convo", sessionId: c.sessionId })}
+                                                >
+                                                    <TrashIcon />
                                                 </button>
                                             </td>
                                         </tr>
@@ -703,6 +735,13 @@ export default function Dashboard() {
                             </div>
                         </div>
                     </div>
+                )}
+                {deleteModalConfig.isOpen && (
+                    <Deletemodal
+                        intent={deleteModalConfig.intent}
+                        sessionId={deleteModalConfig.sessionId}
+                        onClose={() => setDeleteModalConfig({ isOpen: false, intent: "", sessionId: null })}
+                    />
                 )}
             </div>
 
@@ -1161,6 +1200,93 @@ export default function Dashboard() {
 .bubble-user-msg { background: #00A460; color: #fff; border-bottom-right-radius: 3px; }
 .bubble-ai-msg { background: #f3f4f6; color: #1a1a1a; border-bottom-left-radius: 3px; }
 .bubble-time { font-size: 10px; color: #9ca3af; margin-top: 3px; padding: 0 4px; }
+/* Global Danger Utility Button */
+.dash-btn-danger {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #dc2626;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.dash-btn-danger:hover { background: #fee2e2; }
+
+/* Inline Action Row Trash Button */
+.conv-delete-row-btn {
+  background: none;
+  border: 1px solid #fee2e2;
+  border-radius: 5px;
+  padding: 5px;
+  cursor: pointer;
+  color: #ef4444;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.conv-delete-row-btn:hover { background: #fee2e2; }
+
+/* Backdrop Popup Layer Styles */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+.modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+}
+.modal-desc {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0 0 20px 0;
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+.modal-btn-cancel {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #374151;
+}
+.modal-btn-cancel:hover { background: #f9fafb; }
+.modal-btn-delete {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.modal-btn-delete:hover { background: #b91c1c; }
       `}</style>
         </AppProvider>
     );
