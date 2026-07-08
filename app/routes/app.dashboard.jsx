@@ -7,6 +7,8 @@ import { AppProvider, Text, Banner } from "@shopify/polaris";
 import enTranslations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
 
+const TrashIcon = () => <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-current stroke-2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" /></svg>;
+
 export const loader = async ({ request }) => {
     const { session, admin } = await authenticate.admin(request);
     const shop = session.shop;
@@ -190,8 +192,40 @@ export const action = async ({ request }) => {
         return data({ ok: true });
     }
 
+    if (intent === "delete-convo") {
+        await db.conversation.deleteMany({
+            where: {
+                shop,
+                sessionId: fd.get("sessionId").toString(),
+            },
+        });
+
+        return data({ ok: true });
+    }
+
+    if (intent === "delete-all") {
+        await db.conversation.deleteMany({ where: { shop: shop } })
+    }
+
     return data({ ok: false });
 };
+
+function Deletemodal({intent,sessionId}){
+    const fetcher = useFetcher();
+    const deleteconvos = () => {
+        fetcher.submit({ intent: intent,  id: sessionId }, { method: "POST" })
+    }
+return (
+    // entire modal card
+    <div>
+        <div>
+            <h3>{ intent === "delete-convo" ? "Delete the conversation?" : "Delete all conversations?"}</h3>
+            <button>Cancel</button>
+            <button onClick={deleteconvos}>Delete</button>
+        </div>
+    </div>
+)
+}
 
 export default function Dashboard() {
     const { conversations, allMessages, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl } = useLoaderData();
