@@ -18,9 +18,10 @@ export const loader = async ({ request }) => {
   return new Response(null, { status: 405, headers: HEADERS });
 };
 
-function extractOrderInfo(message) {
-  const orderMatch = message.match(/#?(\d{4,})/);
-  const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+function extractOrderInfo(messages) {
+  const text = messages.slice(-6).map(m => m.content).join(" ");
+  const orderMatch = text.match(/#?(\d{4,})/);
+  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
   return {
     orderNumber: orderMatch?.[1] || null,
     email: emailMatch?.[0] || null,
@@ -70,13 +71,17 @@ export const action = async ({ request }) => {
 
     // Order lookup — no Gemini needed
     if (config.capOrderTracking) {
-      const lastMessage = messages[messages.length - 1]?.content || "";
-      const { orderNumber, email } = extractOrderInfo(lastMessage);
-
+      const { orderNumber, email } = extractOrderInfo(messages);
+    
       if (orderNumber && email) {
         const order = await lookupOrder(shop, orderNumber, email);
         const reply = formatOrderReply(order, config.botName);
-        await logMessages(shop, sessionId, customerName, customerEmail, lastMessage, reply);
+        await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
+        return data({ reply }, { headers: HEADERS });
+      }
+      if (orderNumber || email) {
+        const reply = `To look up your order, I need both your order number and the email used at checkout. ${orderNumber ? "You gave the order number — what's the email?" : "You gave the email — what's the order number?"}`;
+        await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
         return data({ reply }, { headers: HEADERS });
       }
     }

@@ -115,7 +115,9 @@ ${merchant?.supportEmail || merchant?.supportUrl ? `SUPPORT CONTACT:\nEmail: ${m
 ${!config.capProducts ? `Do NOT answer product questions. Tell customer you cannot help with that.` : ""}
 ${!config.capPolicies ? `Do NOT answer policy, shipping or returns questions. Tell customer you cannot help with that.` : ""}
 ${!config.capFaqs ? `Do NOT answer FAQ questions. Tell customer you cannot help with that.` : ""}
-${!config.capOrderTracking ? `Do NOT help with order tracking. Tell customer you cannot help with that.` : ""}
+${config.capOrderTracking
+  ? `ORDER TRACKING:\nIf a customer wants to track an order, ask for their order number (e.g. #1234) and the email used at checkout, if not already given. Once you have both, tell them: "Let me look that up for you." Do not attempt to guess order status yourself.`
+  : `Do NOT help with order tracking. Tell customer you cannot help with that.`}
 
 If you cannot answer, direct the customer to support: Email: ${merchant?.supportEmail || "N/A"} | URL: ${merchant?.supportUrl || "N/A"}
 `.trim();
