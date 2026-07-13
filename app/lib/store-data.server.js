@@ -33,7 +33,6 @@ async function fetchProducts(admin) {
 }
 
 export async function lookupOrder(shop, orderNumber, email) {
-  // Get access token from Session table
   const session = await db.session.findFirst({
     where: { shop },
     select: { accessToken: true },
@@ -41,31 +40,85 @@ export async function lookupOrder(shop, orderNumber, email) {
 
   if (!session?.accessToken) return null;
 
-  const res = await fetch(
-    `https://${shop}/admin/api/2024-01/orders.json?name=%23${orderNumber}&email=${encodeURIComponent(email)}&status=any`,
-    {
-      headers: {
-        "X-Shopify-Access-Token": session.accessToken,
-        "Content-Type": "application/json",
+  const res = await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
+    method: "POST",
+    headers: {
+      "X-Shopify-Access-Token": session.accessToken,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: `
+        query LookupOrder($query: String!) {
+          orders(first: 1, query: $query) {
+            nodes {
+              name
+              email
+              createdAt
+              currentTotalPriceSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
+              displayFinancialStatus
+              displayFulfillmentStatus
+              lineItems(first: 50) {
+                nodes {
+                  name
+                  quantity
+                }
+              }
+              fulfillments {
+                trackingInfo {
+                  number
+                  url
+                }
+              }
+            }
+          }
+        }
+      `,
+      variables: {
+        query: `name:#${orderNumber}`,
       },
-    }
-  );
+    }),
+  });
 
   if (!res.ok) return null;
 
-  const data = await res.json();
-  const order = data.orders?.[0];
+  const { data } = await res.json();
+
+  const order = data?.orders?.nodes?.[0];
   if (!order) return null;
+
+  console.log(JSON.stringify(data, null, 2));
+console.log("Expected email:", email);
+console.log("Order email:", order?.email);
+
+  // Verify email ourselves
+  if ((order.email || "").toLowerCase() !== email.toLowerCase()) {
+    return null;
+  }
 
   return {
     number: order.name,
-    status: order.fulfillment_status || "unfulfilled",
-    financialStatus: order.financial_status,
-    createdAt: new Date(order.created_at).toDateString(),
-    total: `${order.currency} ${order.total_price}`,
-    items: order.line_items?.map(i => `${i.name} x${i.quantity}`).join(", "),
-    trackingNumbers: order.fulfillments?.flatMap(f => f.tracking_numbers).join(", ") || null,
-    trackingUrls: order.fulfillments?.flatMap(f => f.tracking_urls).join(", ") || null,
+    status: order.displayFulfillmentStatus,
+    financialStatus: order.displayFinancialStatus,
+    createdAt: new Date(order.createdAt).toDateString(),
+    total: `${order.currentTotalPriceSet.shopMoney.currencyCode} ${order.currentTotalPriceSet.shopMoney.amount}`,
+    items: order.lineItems.nodes
+      .map(i => `${i.name} x${i.quantity}`)
+      .join(", "),
+    trackingNumbers: order.fulfillments
+      .flatMap(f => f.trackingInfo)
+      .map(t => t.number)
+      .filter(Boolean)
+      .join(", ") || null,
+    trackingUrls: order.fulfillments
+      .flatMap(f => f.trackingInfo)
+      .map(t => t.url)
+      .filter(Boolean)
+      .join(", ") || null,
   };
 }
 

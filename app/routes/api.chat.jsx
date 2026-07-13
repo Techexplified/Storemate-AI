@@ -12,6 +12,7 @@ const HEADERS = {
 };
 
 export const loader = async ({ request }) => {
+  console.log("api.chat.jsx loaded");
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: HEADERS });
   }
@@ -58,6 +59,7 @@ async function logMessages(shop, sessionId, customerName, customerEmail, userMes
 }
 
 export const action = async ({ request }) => {
+  console.log("API CHAT HIT");
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: HEADERS });
   if (request.method !== "POST") return data({ error: "Method not allowed" }, { status: 405, headers: HEADERS });
 
@@ -72,6 +74,7 @@ export const action = async ({ request }) => {
     // Order lookup — no Gemini needed
     if (config.capOrderTracking) {
       const { orderNumber, email } = extractOrderInfo(messages);
+      console.log("Extracted:", { orderNumber, email });
     
       if (orderNumber && email) {
         const order = await lookupOrder(shop, orderNumber, email);
