@@ -21,16 +21,33 @@ export const loader = async ({ request }) => {
     const url = new URL(request.url);
     const range = url.searchParams.get("range") || "7d";
 
+    // 1. setup pagination
+    const page = parseInt(url.searchParams.get("page") || "1", 10);
+    const limit = 5;
+    const skip = (page - 1) * limit;
+
     const rangeMap = { "7d": 7, "1m": 30, "3m": 90 };
     const days = rangeMap[range] || 7;
     const since = new Date(Date.now() - days * 86400000);
 
-    const [conversations, allMessages, config, merchantConfig, faqs, policies] = await Promise.all([
-        db.conversation.findMany({
-            where: { shop, role: "user", createdAt: { gte: since } },
-            orderBy: { createdAt: "desc" },
-            take: 50,
-        }),
+    //2. fetch only first message of unique sessions
+    const conversations = await db.conversation.findMany({
+        where: { shop, role: "user", createdAt: { gte: since } },
+        distinct: ["sessionId"],
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: skip,
+    });
+
+    //3. get total unique sessions count
+    const totalSessions = await db.conversation.findMany({
+        where: { shop, role: "user", createdAt: { gte: since } },
+        distinct: ["sessionId"],
+    })
+    const totalconversations = totalSessions.length;
+    const hasNextPage = skip + limit < totalconversations;
+
+    const [allMessages, config, merchantConfig, faqs, policies] = await Promise.all([
         db.conversation.findMany({
             where: { shop, createdAt: { gte: since } },
             orderBy: { createdAt: "asc" },
@@ -130,8 +147,10 @@ export const loader = async ({ request }) => {
         policies,
         isEmbedded,
         supportLinksAdded,
-        totalConversations: conversations.length,
+        totalConversations: totalconversations,
         themeCustomizerUrl,
+        page,
+        hasNextPage,
     });
 };
 
@@ -258,7 +277,7 @@ function Deletemodal({ intent, sessionId, onClose }) {
 }
 
 export default function Dashboard() {
-    const { conversations, allMessages, escalatedSessions, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl } = useLoaderData();
+    const { conversations, allMessages, escalatedSessions, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl, page, hasNextPage } = useLoaderData();
     const [searchParams, setSearchParams] = useSearchParams();
     const { revalidate } = useRevalidator();
     const navigate = useNavigate();
@@ -471,9 +490,35 @@ export default function Dashboard() {
                         </table>
                     )}
 
-                    {conversations.length > 10 && (
-                        <div className="dash-table-footer">
-                            Showing 10 of {conversations.length} conversations
+                    {conversations.length > 5 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px" }}>
+                            <span style={{ fontSize: "12px", color: "#9ca3af" }}>
+                                Page {page} (Total conversations: {totalConversations})
+                            </span>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                                <button
+                                    className="dash-btn"
+                                    disabled={page <= 1}
+                                    onClick={() => {
+                                        const params = new URLSearchParams(searchParams);
+                                        params.set("page", (page - 1).toString());
+                                        setSearchParams(params);
+                                    }}
+                                >
+                                    ← Previous
+                                </button>
+                                <button
+                                    className="dash-btn"
+                                    disabled={!hasNextPage}
+                                    onClick={() => {
+                                        const params = new URLSearchParams(searchParams);
+                                        params.set("page", (page + 1).toString());
+                                        setSearchParams(params);
+                                    }}
+                                >
+                                    Next →
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -1218,18 +1263,21 @@ export default function Dashboard() {
 .dash-btn-danger {
   height: 34px;
   padding: 0 12px;
-  border: 1px solid #fca5a5;
-  border-radius: 6px;
+  border: 1px solid #dc2626;
+  border-radius: 10px;
   font-size: 13px;
-  color: #dc2626;
-  background: #fff;
+  color: #fff;
+  background: #dc2626;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
 }
-.dash-btn-danger:hover { background: #fee2e2; }
+.dash-btn-danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
 
 /* Inline Action Row Trash Button */
 .conv-delete-row-btn {
