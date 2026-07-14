@@ -90,11 +90,7 @@ export async function lookupOrder(shop, orderNumber, email) {
 
   const order = data?.orders?.nodes?.[0];
   if (!order) return null;
-
-  console.log(JSON.stringify(data, null, 2));
-console.log("Expected email:", email);
-console.log("Order email:", order?.email);
-
+  
   // Verify email ourselves
   if ((order.email || "").toLowerCase() !== email.toLowerCase()) {
     return null;
@@ -169,9 +165,9 @@ ${!config.capProducts ? `Do NOT answer product questions. Tell customer you cann
 ${!config.capPolicies ? `Do NOT answer policy, shipping or returns questions. Tell customer you cannot help with that.` : ""}
 ${!config.capFaqs ? `Do NOT answer FAQ questions. Tell customer you cannot help with that.` : ""}
 ${config.capOrderTracking
-  ? `ORDER TRACKING:\nIf a customer wants to track an order, ask for their order number (e.g. #1234) and the email used at checkout, if not already given. Once you have both, tell them: "Let me look that up for you." Do not attempt to guess order status yourself.`
+  ? `Tell users to go to Track tab to track thier orders`
   : `Do NOT help with order tracking. Tell customer you cannot help with that.`}
 
-If you cannot answer, direct the customer to support: Email: ${merchant?.supportEmail || "N/A"} | URL: ${merchant?.supportUrl || "N/A"}
+If you cannot answer , first ask if customer want contact links and if they want it , only then direct the customer to support: Email: ${merchant?.supportEmail || "N/A"} | URL: ${merchant?.supportUrl || "N/A"}
 `.trim();
 }
