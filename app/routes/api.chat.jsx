@@ -64,18 +64,27 @@ export const action = async ({ request }) => {
   if (request.method !== "POST") return data({ error: "Method not allowed" }, { status: 405, headers: HEADERS });
 
   try {
-    const { shop, messages, sessionId, customerName = "Guest", customerEmail = null } = await request.json();
-    if (!shop || !messages?.length || !sessionId) return data({ error: "Missing fields" }, { status: 400, headers: HEADERS });
+    const { shop, messages, sessionId, customerName = "Guest", customerEmail = null, orderLookup } = await request.json();
+    if (!shop || !sessionId || (!messages?.length && !orderLookup)) {
+      return data({ error: "Missing fields" }, { status: 400, headers: HEADERS });
+    };
 
 
     const config = await db.chatbotConfig.findUnique({ where: { shop } });
     if (!config) return data({ error: "Chatbot not configured" }, { status: 404, headers: HEADERS });
 
+    if (orderLookup?.orderNumber && orderLookup?.email) {
+      const order = await lookupOrder(shop, orderLookup.orderNumber, orderLookup.email);
+      const reply = formatOrderReply(order, config.botName);
+      await logMessages(shop, sessionId, customerName, customerEmail, `[Order Tracking] #${orderLookup.orderNumber}`, reply);
+      return data({ reply }, { headers: HEADERS });
+    }
+
     // Order lookup — no Gemini needed
     if (config.capOrderTracking) {
       const { orderNumber, email } = extractOrderInfo(messages);
       console.log("Extracted:", { orderNumber, email });
-    
+
       if (orderNumber && email) {
         const order = await lookupOrder(shop, orderNumber, email);
         const reply = formatOrderReply(order, config.botName);
