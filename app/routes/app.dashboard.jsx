@@ -34,7 +34,7 @@ export const loader = async ({ request }) => {
     const conversations = await db.conversation.findMany({
         where: { shop, role: "user", createdAt: { gte: since } },
         distinct: ["sessionId"],
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "asc" },
         take: limit,
         skip: skip,
     });
@@ -490,7 +490,7 @@ export default function Dashboard() {
                         </table>
                     )}
 
-                    {conversations.length > 5 && (
+                    {totalConversations > 5 && (
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px" }}>
                             <span style={{ fontSize: "12px", color: "#9ca3af" }}>
                                 Page {page} (Total conversations: {totalConversations})
