@@ -25,6 +25,7 @@ export async function loader({ request }) {
         logoUrl: config?.logoUrl ?? null,
         starterPrompts: config?.starterPrompts ? JSON.parse(config.starterPrompts) : [],
         capFaqs: config?.capFaqs ?? true,
+        capOrderTracking: config?.capOrderTracking ?? true,
         faqs: faqs ?? [],
         supportEmail: merchant?.supportEmail ?? null,
         supportUrl: merchant?.supportUrl ?? null,
