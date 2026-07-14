@@ -305,11 +305,22 @@ function renderStarterPrompts() {
 
   function appendMessage(role, text, isIndicator = false) {
     const history = document.getElementById('sm-chat-history');
+    
+    // 1. Create and add the new message bubble
     const msg = document.createElement('div');
     msg.className = `sm-msg ${role}${isIndicator ? ' sm-indicator' : ''}`;
     msg.textContent = text;
     history.appendChild(msg);
+
+    // 2. Grab the starter prompts container and force it to the bottom
+    const starterContainer = document.getElementById('sm-starter-container');
+    if (starterContainer) {
+      history.appendChild(starterContainer); 
+    }
+
+    // 3. Scroll to the bottom
     document.getElementById('sm-panel-chat').scrollTop = 99999;
+    
     return msg;
   }
 

@@ -53,6 +53,7 @@ export const action = async ({ request }) => {
     update: {
       botName: formData.get("botName"),
       welcomeMessage: formData.get("welcomeMessage"),
+      starterPrompts: formData.get("starterPrompts"),
       brandColor: formData.get("brandColor"),
       avatarPreset: formData.get("avatarPreset"),
       logoUrl: formData.get("logoUrl") || null,
@@ -66,6 +67,7 @@ export const action = async ({ request }) => {
       shop: session.shop,
       botName: formData.get("botName") || "Aria",
       welcomeMessage: formData.get("welcomeMessage") || "",
+      starterPrompts: formData.get("starterPrompts") || null,
       brandColor: formData.get("brandColor") || "#00A460",
       avatarPreset: formData.get("avatarPreset") || "green",
       logoUrl: formData.get("logoUrl") || null,
@@ -100,6 +102,25 @@ export default function Settings() {
   const [themeColor, setThemeColor] = useState("#00A460");
   const [logoError, setLogoError] = useState(null);
 
+  const [starterPrompts, setStarterPrompts] = useState(
+    config?.starterPrompts ? JSON.parse(config.starterPrompts) : ["Track my order"]
+  );
+
+  const addStarterPrompt = () => {
+    if(starterPrompts.length >= 3) return;
+    setStarterPrompts([...starterPrompts, ""]);
+  };
+
+  const updateStarterPrompt = (index,value) => {
+    const updated = [...starterPrompts];
+    updated[index] = value;
+    setStarterPrompts(updated);
+  };
+
+  const removeStarterPrompt = (index) => {
+    setStarterPrompts(starterPrompts.filter((_,i) => i!== index));
+  };
+
   useEffect(() => {
     if (fetchedThemeColor) setThemeColor(fetchedThemeColor);
   }, [fetchedThemeColor]);
@@ -130,13 +151,15 @@ export default function Settings() {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
-    fetcher.submit(
-      Object.fromEntries(
-        Object.entries(settings).map(([k, v]) => [k, String(v)])
-      ),
-      { method: "POST" }
+const handleSave = () => {
+    const payload = Object.fromEntries(
+      Object.entries(settings).map(([k, v]) => [k, String(v)])
     );
+    
+    // Add the stringified prompts to the payload
+    payload.starterPrompts = JSON.stringify(starterPrompts);
+
+    fetcher.submit(payload, { method: "POST" });
   };
 
   const isSaving = fetcher.state !== "idle";
@@ -192,6 +215,44 @@ export default function Settings() {
                 rows="3"
                 style={{ padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", resize: "vertical", minHeight: "70px", width: "100%", boxSizing: "border-box", fontFamily: "inherit" }}
               />
+            </div>
+
+            {/* Starter Prompts UI */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "16px", borderTop: "1px solid #ebebeb" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: "500", display: "block" }}>Starter Prompts</label>
+                  <span style={{ fontSize: "12px", color: "#8c9196" }}>Suggested questions (Max 3)</span>
+                </div>
+                {starterPrompts.length < 3 && (
+                  <button
+                    onClick={addStarterPrompt}
+                    style={{ background: "none", border: "none", color: "#202223", fontSize: "12px", fontWeight: "600", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                  >
+                    + Add Prompt
+                  </button>
+                )}
+              </div>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {starterPrompts.map((prompt, index) => (
+                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <input
+                      value={prompt}
+                      onChange={(e) => updateStarterPrompt(index, e.target.value)}
+                      placeholder="e.g. What are your shipping options?"
+                      style={{ flex: 1, padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }}
+                    />
+                    <button
+                      onClick={() => removeStarterPrompt(index)}
+                      title="Remove prompt"
+                      style={{ background: "none", border: "none", color: "#8c9196", cursor: "pointer", fontSize: "18px", padding: "0 4px", display: "flex", alignItems: "center" }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "16px", borderTop: "1px solid #ebebeb" }}>

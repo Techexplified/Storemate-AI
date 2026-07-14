@@ -152,9 +152,17 @@ export async function buildSystemPrompt(shop, admin, config) {
   const policies = config.capPolicies ? await db.policy.findMany({ where: { shop } }) : [];
   const policyText = policies.length ? policies.map(p => `${p.name}:\n${p.text}`).join("\n\n") : "";
 
+  const LANGUAGE_MAP = {
+    en: "English", es: "Spanish", fr: "French", de: "German",
+    pt: "Portuguese", hi: "Hindi", ar: "Arabic", zh: "Chinese",
+    ja: "Japanese", ko: "Korean", it: "Italian", nl: "Dutch"
+  };
+
+  const lang = config.language ? LANGUAGE_MAP[config?.language] : "English"; 
+
   return `
 You are ${config.botName}, a helpful store assistant. Tone: ${config.personalityTone}.
-${config.language ? `Always respond in: ${config.language}` : ""}
+${`Always Respond in ${lang} language `}
 
 ${config.capProducts && productText ? `PRODUCTS:\n${productText}` : ""}
 ${policyText ? `POLICIES:\n${policyText}` : ""}

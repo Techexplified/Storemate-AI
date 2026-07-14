@@ -30,21 +30,26 @@ export const loader = async ({ request }) => {
     const days = rangeMap[range] || 7;
     const since = new Date(Date.now() - days * 86400000);
 
-    //2. fetch only first message of unique sessions
-    const conversations = await db.conversation.findMany({
+    // 2a.Fetch the newest distinct sessions so recent conversations show first
+    const recentSessions = await db.conversation.findMany({
         where: { shop, role: "user", createdAt: { gte: since } },
         distinct: ["sessionId"],
         orderBy: { createdAt: "asc" },
         take: limit,
         skip: skip,
     });
-
-    //3. get total unique sessions count
-    const totalSessions = await db.conversation.findMany({
+// 2. Fetch the FIRST message of every unique session (ascending)
+    const allUniqueSessions = await db.conversation.findMany({
         where: { shop, role: "user", createdAt: { gte: since } },
         distinct: ["sessionId"],
-    })
-    const totalconversations = totalSessions.length;
+        orderBy: { createdAt: "asc" },
+    });
+
+    // 3. Sort them manually descending (newest first) and apply pagination
+    allUniqueSessions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const totalconversations = allUniqueSessions.length;
+    const conversations = allUniqueSessions.slice(skip, skip + limit);
     const hasNextPage = skip + limit < totalconversations;
 
     const [allMessages, config, merchantConfig, faqs, policies] = await Promise.all([
