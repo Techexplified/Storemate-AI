@@ -27,9 +27,9 @@
     try {
       const response = await fetch(`${appUrl}/api/config?shop=${shop}`);
       const data = await response.json();
-      config = data || { botName: "Aria", brandColor: "#00A460", capFaqs: true };
+      config = data || { botName: "Aria", brandColor: "#00A460", capFaqs: true, capOrderTracking: true };
       injectStyles();
-      renderWidget();
+      renderWidget(config);
     } catch (e) {
       console.error("StoreMate initialization failed:", e);
     }
@@ -75,13 +75,32 @@
       .sm-faq-item.open .sm-faq-q::after { transform: rotate(180deg); }
       .sm-faq-a { display: none; padding: 10px 12px; font-size: 12px; color: #4b5563; border-top: 1px solid #f3f4f6; background: #fafafa; line-height: 1.4; }
       .sm-faq-item.open .sm-faq-a { display: block; }
+
+      /* Track Panel UI Upgrades */
+      .sm-track-container { padding: 16px; background: #f9fafb; }
+      .sm-track-card { background: white; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 16px; }
+      .sm-track-card p { font-size: 13px; color: #6b7280; margin: 0 0 16px 0; text-align: center; }
+      .sm-form-input { width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; font-size: 13px; outline: none; transition: border-color 0.2s; }
+      .sm-form-input:focus { border-color: ${config?.brandColor || '#00A460'}; }
+      .sm-btn-primary { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; background: ${config?.brandColor || '#00A460'}; color: white; transition: opacity 0.2s; }
+      .sm-btn-primary:hover { opacity: 0.9; }
+
+      /* The 'white-space: pre-wrap' is the magic bullet that respects backend newlines */
+      #sm-track-result { display: none; font-size: 13px; line-height: 1.6; color: #111; white-space: pre-wrap; background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+      #sm-track-result.show { display: block; animation: sm-fade-in 0.3s ease; }
+      @keyframes sm-fade-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+      /* Starter Prompts UI */
+      .sm-starter-prompts { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-top: 5px; margin-bottom: 10px; }
+      .sm-starter-btn { background: white; border: 1px solid ${config?.brandColor || '#00A460'}; border-radius: 20px; padding: 5px 12px; font-size: 11px; color: ${config?.brandColor || '#00A460'}; cursor: pointer; transition: all 0.2s ease; font-family: inherit; }
+      .sm-starter-btn:hover { background: ${config?.brandColor || '#00A460'}; color: white; }
     `;
     const styleEl = document.createElement('style');
     styleEl.innerHTML = styles;
     document.head.appendChild(styleEl);
   }
 
-  function renderWidget() {
+  function renderWidget(config) {
     const container = document.createElement('div');
     container.id = 'sm-widget';
 
@@ -114,13 +133,23 @@
         </div>
         <div id="sm-tabs">
           <div class="sm-tab active" data-tab="chat">Chat</div>
-          <div class="sm-tab" data-tab="faq">FAQs</div>
+          ${ config.capFaqs ? `<div class="sm-tab" data-tab="faq">FAQs</div>` : ''}
+          ${ config.capOrderTracking ? `<div class="sm-tab" data-tab="track">Track</div>` : ''}
         </div>
         <div id="sm-panel-chat" class="sm-panel active">
           <div id="sm-chat-history"></div>
         </div>
         <div id="sm-panel-faq" class="sm-panel">
           <div id="sm-faq-content"></div>
+        </div>
+        <div id="sm-panel-track" class="sm-panel sm-track-container">
+          <div class="sm-track-card">
+            <p>Enter your details to get your latest order status.</p>
+            <input type="text" id="sm-track-order" placeholder="Order number (e.g. #1020)" class="sm-form-input">
+            <input type="email" id="sm-track-email" placeholder="Email used at checkout" class="sm-form-input">
+            <button id="sm-track-submit" class="sm-btn-primary">Track Order</button>
+          </div>
+          <div id="sm-track-result"></div>
         </div>
         <div id="sm-input-area">
           <input type="text" id="sm-message-input" placeholder="Message ${esc(config.botName || 'Aria')}..." autocomplete="off">
@@ -150,8 +179,54 @@
     setupEventListeners();
 
     if (config.welcomeMessage) appendMessage('bot', config.welcomeMessage);
+    renderStarterPrompts();
     triggerLeadCapture(2000);
     renderFaqs();
+  }
+
+function renderStarterPrompts() {
+    let prompts = [];
+    try {
+      prompts = typeof config.starterPrompts === 'string' ? JSON.parse(config.starterPrompts) : config.starterPrompts;
+    } catch(e) {}
+  
+    if (!prompts || !Array.isArray(prompts) || prompts.length === 0) return;
+  
+    const history = document.getElementById('sm-chat-history');
+    const container = document.createElement('div');
+    container.className = 'sm-starter-prompts';
+    container.id = 'sm-starter-container'; 
+  
+    prompts.forEach(promptText => {
+      if (!promptText.trim()) return;
+      
+      const btn = document.createElement('button');
+      btn.className = 'sm-starter-btn';
+      btn.textContent = promptText;
+      
+      btn.addEventListener('click', (e) => {
+        const input = document.getElementById('sm-message-input');
+        input.value = promptText;
+        
+        // Remove ONLY the clicked button
+        e.target.remove();
+        
+        // Remove the container if no buttons are left
+        if (container.childNodes.length === 0) {
+          container.remove();
+        }
+  
+        // Trigger the send action
+        handleSend(); 
+      });
+      
+      container.appendChild(btn);
+    });
+  
+    if (container.childNodes.length > 0) {
+      history.appendChild(container);
+      document.getElementById('sm-panel-chat').scrollTop = 99999;
+    }
   }
 
   function setupEventListeners() {
@@ -191,6 +266,34 @@
     document.getElementById('sm-lead-popup-skip').addEventListener('click', () => {
       document.getElementById('sm-lead-popup').style.display = 'none';
     });
+
+    document.getElementById('sm-track-submit').addEventListener('click', async () => {
+      const orderNumber = document.getElementById('sm-track-order').value.trim();
+      const email = document.getElementById('sm-track-email').value.trim();
+      const resultEl = document.getElementById('sm-track-result');
+      
+      if (!orderNumber || !email) { 
+        resultEl.textContent = "Please fill in both fields."; 
+        resultEl.classList.add('show');
+        return; 
+      }
+
+      resultEl.textContent = "Looking up your order...";
+      resultEl.classList.add('show'); // Make the result box visible while loading
+      
+      try {
+        const response = await fetch(`${appUrl}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shop, sessionId: conversationId, orderLookup: { orderNumber, email } })
+        });
+        const data = await response.json();
+        resultEl.textContent = response.ok ? data.reply : "Something went wrong. Please try again.";
+      } catch {
+        resultEl.textContent = "I'm temporarily unavailable, please try again in a moment.";
+      }
+    });
+
   }
 
   function triggerLeadCapture(delay) {
@@ -210,6 +313,7 @@
     return msg;
   }
 
+  
   async function handleSend() {
     const input = document.getElementById('sm-message-input');
     const message = input.value.trim();
