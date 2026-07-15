@@ -48,6 +48,7 @@ model ChatbotConfig {
   capOrderTracking Boolean @default(true)
   capPolicies      Boolean @default(true)
   capFaqs          Boolean @default(true)
+  setupComplete    Boolean  @default(false)
 }
 
 model MerchantConfig {

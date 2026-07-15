@@ -73,7 +73,10 @@ export const loader = async ({ request }) => {
   const config = await db.chatbotConfig.findUnique({ where: { shop: session.shop } });
 
   const url = new URL(request.url);
-  if (config && url.searchParams.get("mode") !== "edit") return redirect(`/app/dashboard?${url.searchParams.toString()}`);
+  // FIX: Only redirect to dashboard if onboarding was fully completed!
+  if (config?.setupComplete && url.searchParams.get("mode") !== "edit") {
+    return redirect(`/app/dashboard?${url.searchParams.toString()}`);
+  }
 
   let themeColor = null;
   try {
@@ -560,11 +563,11 @@ export default function Index() {
                     style={{ border: "none", outline: "none", fontSize: "13px", width: "100%", fontFamily: "monospace" }}
                   />
                 </div>
-                {formData.brandColor === themeColor && (
+                {/* {formData.brandColor === themeColor && (
                   <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "6px", color: "#00A460", fontSize: "12px" }}>
                     <span>⊙</span> Matches your Shopify theme
                   </div>
-                )}
+                )} */}
               </div>
             </div>
 

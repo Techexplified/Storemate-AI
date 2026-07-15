@@ -86,28 +86,38 @@ export const loader = async ({ request }) => {
 export const action = async ({ request }) => {
     const { session } = await authenticate.admin(request);
     const formData = await request.formData();
+    const intent = formData.get("intent");
+
+    // 1. Gather all the capability values from the page
+    const capabilityData = {
+        capProducts: formData.get("capProducts") === "true",
+        capOrderTracking: formData.get("capOrderTracking") === "true",
+        capPolicies: formData.get("capPolicies") === "true",
+        capFaqs: formData.get("capFaqs") === "true",
+    };
+
+    // 2. Run the upsert with the capability data
     await db.chatbotConfig.upsert({
         where: { shop: session.shop },
-        update: {
-            capProducts: formData.get("capProducts") === "true",
-            capOrderTracking: formData.get("capOrderTracking") === "true",
-            capPolicies: formData.get("capPolicies") === "true",
-            capFaqs: formData.get("capFaqs") === "true",
-        },
+        update: capabilityData,
         create: {
             shop: session.shop,
-            capProducts: formData.get("capProducts") === "true",
-            capOrderTracking: formData.get("capOrderTracking") === "true",
-            capPolicies: formData.get("capPolicies") === "true",
-            capFaqs: formData.get("capFaqs") === "true",
+            ...capabilityData,
         },
     });
 
-    if(intent === "finish"){
-    return data({ success: true });
+    // 3. Handle the final step vs draft routing
+    if (intent === "finish") {
+        // Mark onboarding complete and redirect to dashboard securely
+        await db.chatbotConfig.update({
+            where: { shop: session.shop },
+            data: { setupComplete: true }
+        });
+        return redirect("/app/dashboard");
     }
-    
-    return redirect(`/app/capabilities?mode=edit`);
+
+    // Otherwise, they clicked Save Draft: keep them right here
+    return redirect("/app/capabilities?mode=edit");
 };
 
 export default function Capabilities() {
