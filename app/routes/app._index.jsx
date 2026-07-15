@@ -73,7 +73,6 @@ export const loader = async ({ request }) => {
   const config = await db.chatbotConfig.findUnique({ where: { shop: session.shop } });
 
   const url = new URL(request.url);
-  // FIX: Only redirect to dashboard if onboarding was fully completed!
   if (config?.setupComplete && url.searchParams.get("mode") !== "edit") {
     return redirect(`/app/dashboard?${url.searchParams.toString()}`);
   }
