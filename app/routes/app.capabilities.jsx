@@ -96,13 +96,18 @@ export const action = async ({ request }) => {
         },
         create: {
             shop: session.shop,
-            capProducts: true,
-            capOrderTracking: true,
-            capPolicies: true,
-            capFaqs: true,
+            capProducts: formData.get("capProducts") === "true",
+            capOrderTracking: formData.get("capOrderTracking") === "true",
+            capPolicies: formData.get("capPolicies") === "true",
+            capFaqs: formData.get("capFaqs") === "true",
         },
     });
+
+    if(intent === "finish"){
     return data({ success: true });
+    }
+    
+    return redirect(`/app/capabilities?mode=edit`);
 };
 
 export default function Capabilities() {

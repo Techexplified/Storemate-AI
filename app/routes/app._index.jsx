@@ -140,7 +140,7 @@ export const action = async ({ request }) => {
   }
 
   if (intent === "save") {
-    return data({ success: true });
+    return redirect(`/app?mode=edit`);
   }
 
   return data({ success: true });
