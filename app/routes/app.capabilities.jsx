@@ -136,10 +136,13 @@ export default function Capabilities() {
 
     const handleSave = (andContinue = false) => {
         fetcher.submit(
-            Object.fromEntries(Object.entries(selected).map(([k, v]) => [k, String(v)])),
+            {
+                ...Object.fromEntries(Object.entries(selected).map(([k, v]) => [k, String(v)])),
+                intent: andContinue ? "finish" : "draft",
+            },
             { method: "POST" }
         );
-        if (andContinue) navigate("/app/dashboard");
+        // don't navigate here — let the server's redirect (in the action) handle it
     };
 
     const enabledCount = Object.values(selected).filter(Boolean).length;
