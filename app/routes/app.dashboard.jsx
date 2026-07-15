@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { AppProvider, Text, Banner } from "@shopify/polaris";
 import enTranslations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
+import { syncProducts } from "../lib/store-data.server";
 
 const TrashIcon = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
