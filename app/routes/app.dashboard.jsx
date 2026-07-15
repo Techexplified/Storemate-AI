@@ -21,6 +21,16 @@ export const loader = async ({ request }) => {
     const url = new URL(request.url);
     const range = url.searchParams.get("range") || "7d";
 
+    // 1. Check if the merchant config row exists
+    const cached = await db.merchantConfig.findUnique({ where: { shop } });
+
+    // 2. If it doesn't exist, this is a first-time install. Fire the background sync!
+    if (!cached) {
+        syncProducts(shop, admin).catch(err => {
+            console.error(` Background initial product sync failed for ${shop}:`, err);
+        });
+    }
+
     // 1. setup pagination
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const limit = 5;
