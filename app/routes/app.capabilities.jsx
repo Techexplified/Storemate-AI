@@ -4,6 +4,7 @@ import { AppProvider, Text, Banner } from "@shopify/polaris";
 import db from "../db.server";
 import { useState } from "react";
 import enTranslations from "@shopify/polaris/locales/en.json";
+import "@shopify/polaris/build/esm/styles.css";
 
 const ICONS = {
     capProducts: (
