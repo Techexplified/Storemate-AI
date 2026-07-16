@@ -91,4 +91,6 @@ model Conversation {
   customerEmail String?
 
   @@index([shop])
+  @@index([shop,createdAt])
+  @@index([shop,role,createdAt])
 }
