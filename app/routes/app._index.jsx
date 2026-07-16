@@ -657,7 +657,7 @@ export default function Index() {
             <div style={{ position: "relative", padding: "16px", minHeight: "420px" }}>
               {/* Fake nav */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                <span style={{ fontWeight: "700", fontSize: "13px" }}>✦ AuraStore</span>
+                <span style={{ fontSize: "15px", fontWeight: "700", color: "#111" }}>Premium Essentials</span>
                 {!isMobile && (
                   <div style={{ display: "flex", gap: "16px" }}>
                     {["Shop", "Collections", "About"].map((l) => (
@@ -667,10 +667,10 @@ export default function Index() {
                 )}
               </div>
               {/* Hero */}
-              <div style={{ marginBottom: "16px" }}>
+              {/* <div style={{ marginBottom: "16px" }}>
                 <div style={{ fontSize: "18px", fontWeight: "700", color: "#111" }}>Premium Essentials</div>
                 <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>Curated for modern living.</div>
-              </div>
+              </div> */}
 
               {/* Chat widget */}
               <div style={{
