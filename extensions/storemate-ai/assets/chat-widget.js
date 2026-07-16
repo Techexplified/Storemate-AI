@@ -1,6 +1,6 @@
 (function () {
-  const { shop, appUrl } = window.__storeMate || {};
-  if (!shop || !appUrl) return;
+  const { shop, appUrl, storemateLogo } = window.__storeMate || {};
+  if (!shop || !appUrl || !storemateLogo) return;
 
   if (document.getElementById('sm-widget')) return;
 
@@ -38,7 +38,8 @@
   function injectStyles() {
     const styles = `
       #sm-widget { position: fixed; bottom: 20px; right: 20px; z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-      #sm-fab { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: none; color: white; background: ${config?.brandColor || '#00A460'}; padding: 10px; box-sizing: border-box; }
+      #sm-fab { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.15); color: white; background: ${config?.brandColor || '#00A460'}; padding: 0px; box-sizing: border-box; overflow: hidden }
+      #sm-fab img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
       #sm-fab svg, #sm-fab img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
       #sm-window { display: none; width: 320px; height: 500px; max-height: 80vh; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); flex-direction: column; overflow: hidden; position: absolute; bottom: 65px; right: 0; border: 1px solid #e1e3e5; }
       #sm-window.open { display: flex; }
@@ -118,8 +119,10 @@
       ? `<img src="${esc(config.logoUrl)}" alt="logo" />`
       : AVATARS[config.avatarPreset] || AVATARS.green;
 
+    const brandlogoHtml = storemateLogo ? `<img src=${storemateLogo} />` : logoHtml;
+
     container.innerHTML = `
-      <button id="sm-fab">${logoHtml}</button>
+      <button id="sm-fab">${brandlogoHtml}</button>
       <div id="sm-window">
         <div id="sm-header">
           <div class="sm-avatar">${logoHtml}</div>

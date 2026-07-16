@@ -1,4 +1,4 @@
-import { useLoaderData, useFetcher,data } from "react-router";
+import { useLoaderData, useFetcher, data, useNavigate } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState, useEffect } from "react";
@@ -30,8 +30,8 @@ const LANGUAGES = [
 
 export const loader = async ({ request }) => {
   const { session, admin } = await authenticate.admin(request);
-  const config = await db.chatbotConfig.findUnique({ 
-    where: { shop: session.shop } 
+  const config = await db.chatbotConfig.findUnique({
+    where: { shop: session.shop }
   });
 
   let themeColor = null;
@@ -107,18 +107,18 @@ export default function Settings() {
   );
 
   const addStarterPrompt = () => {
-    if(starterPrompts.length >= 3) return;
+    if (starterPrompts.length >= 3) return;
     setStarterPrompts([...starterPrompts, ""]);
   };
 
-  const updateStarterPrompt = (index,value) => {
+  const updateStarterPrompt = (index, value) => {
     const updated = [...starterPrompts];
     updated[index] = value;
     setStarterPrompts(updated);
   };
 
   const removeStarterPrompt = (index) => {
-    setStarterPrompts(starterPrompts.filter((_,i) => i!== index));
+    setStarterPrompts(starterPrompts.filter((_, i) => i !== index));
   };
 
   useEffect(() => {
@@ -151,11 +151,11 @@ export default function Settings() {
     reader.readAsDataURL(file);
   };
 
-const handleSave = () => {
+  const handleSave = () => {
     const payload = Object.fromEntries(
       Object.entries(settings).map(([k, v]) => [k, String(v)])
     );
-    
+
     // Add the stringified prompts to the payload
     payload.starterPrompts = JSON.stringify(starterPrompts);
 
@@ -164,205 +164,215 @@ const handleSave = () => {
 
   const isSaving = fetcher.state !== "idle";
   const selectedPreset = PRESETS.find(p => p.id === settings.avatarPreset) || PRESETS[0];
+  const navigate = useNavigate();
 
   return (
     <AppProvider i18n={enTranslations}>
-  <div style={{ backgroundColor: "#f4f6f8", minHeight: "100vh", padding: "32px 40px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", color: "#202223" }}>
-    <div style={{ maxWidth: "1100px" }}>
+      <div style={{ backgroundColor: "#f4f6f8", minHeight: "100vh", padding: "32px 40px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", color: "#202223", display: "flex", flexWrap: "initial" }}>
+        <div style={{ width: "100%", margin: "0 auto" }}>
 
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Chatbot Settings</h1>
-        <p style={{ fontSize: "13px", color: "#6d7175", margin: 0 }}>Manage your AI persona, appearance, and core capabilities.</p>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", alignItems: "start" }}>
-
-        {/* LEFT COLUMN: Persona & Appearance */}
-        <div style={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e3e5e7", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", padding: "24px" }}>
-          <h2 style={{ fontSize: "13px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 20px 0", color: "#6d7175" }}>Persona & Appearance</h2>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-
-            <div style={{ display: "flex", gap: "16px" }}>
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "500" }}>Assistant Name</label>
-                <input
-                  type="text"
-                  value={settings.botName}
-                  onChange={(e) => updateSetting("botName", e.target.value)}
-                  style={{ padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }}
-                />
-              </div>
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "500" }}>Language</label>
-                <select
-                  value={settings.language}
-                  onChange={(e) => updateSetting("language", e.target.value)}
-                  style={{ padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", backgroundColor: "#fff", width: "100%", boxSizing: "border-box" }}
-                >
-                  {LANGUAGES.map(lang => (
-                    <option key={lang.code} value={lang.code}>{lang.label}</option>
-                  ))}
-                </select>
-              </div>
+          {/* Header Section */}
+          <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h1 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Chatbot Settings</h1>
+              <p style={{ fontSize: "13px", color: "#6d7175", margin: 0 }}>Manage your AI persona, appearance, and core capabilities.</p>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "13px", fontWeight: "500" }}>Welcome Message</label>
-              <textarea
-                value={settings.welcomeMessage}
-                onChange={(e) => updateSetting("welcomeMessage", e.target.value)}
-                rows="3"
-                style={{ padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", resize: "vertical", minHeight: "70px", width: "100%", boxSizing: "border-box", fontFamily: "inherit" }}
-              />
+            {/* Main Call to Action moved to Top Header for better access */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => navigate(`/app/dashboard`)}
+                style={{ color: "#202223", backgroundColor: "#fff", border: "1px solid #c9cccf", padding: "10px 20px", borderRadius: "6px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}
+              >
+                ⟵Back
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                style={{ backgroundColor: "#202223", color: "#fff", border: "1px solid #202223", padding: "10px 20px", borderRadius: "6px", fontSize: "13px", fontWeight: "600", cursor: isSaving ? "not-allowed" : "pointer", opacity: isSaving ? 0.7 : 1 }}
+              >
+                {isSaving ? "Saving..." : "Save Settings"}
+              </button>
             </div>
+          </div>
 
-            {/* Starter Prompts UI */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "16px", borderTop: "1px solid #ebebeb" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <label style={{ fontSize: "13px", fontWeight: "500", display: "block" }}>Starter Prompts</label>
-                  <span style={{ fontSize: "12px", color: "#8c9196" }}>Suggested questions (Max 3)</span>
-                </div>
-                {starterPrompts.length < 3 && (
-                  <button
-                    onClick={addStarterPrompt}
-                    style={{ background: "none", border: "none", color: "#202223", fontSize: "12px", fontWeight: "600", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-                  >
-                    + Add Prompt
-                  </button>
-                )}
-              </div>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {starterPrompts.map((prompt, index) => (
-                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {/* New 70/30 Asymmetric Layout Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2.2fr) minmax(0, 1fr)", gap: "24px", alignItems: "start" }}>
+
+            {/* LEFT COLUMN: Persona & Appearance (Takes up larger screen portion) */}
+            <div style={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e3e5e7", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", padding: "24px" }}>
+              <h2 style={{ fontSize: "13px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 20px 0", color: "#6d7175" }}>Persona & Appearance</h2>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+
+                <div style={{ display: "flex", gap: "16px" }}>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "13px", fontWeight: "500" }}>Assistant Name</label>
                     <input
-                      value={prompt}
-                      onChange={(e) => updateStarterPrompt(index, e.target.value)}
-                      placeholder="e.g. What are your shipping options?"
-                      style={{ flex: 1, padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }}
+                      type="text"
+                      value={settings.botName}
+                      onChange={(e) => updateSetting("botName", e.target.value)}
+                      style={{ padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }}
                     />
-                    <button
-                      onClick={() => removeStarterPrompt(index)}
-                      title="Remove prompt"
-                      style={{ background: "none", border: "none", color: "#8c9196", cursor: "pointer", fontSize: "18px", padding: "0 4px", display: "flex", alignItems: "center" }}
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "13px", fontWeight: "500" }}>Language</label>
+                    <select
+                      value={settings.language}
+                      onChange={(e) => updateSetting("language", e.target.value)}
+                      style={{ padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", backgroundColor: "#fff", width: "100%", boxSizing: "border-box" }}
                     >
-                      ×
+                      {LANGUAGES.map(lang => (
+                        <option key={lang.code} value={lang.code}>{lang.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: "500" }}>Welcome Message</label>
+                  <textarea
+                    value={settings.welcomeMessage}
+                    onChange={(e) => updateSetting("welcomeMessage", e.target.value)}
+                    rows="3"
+                    style={{ padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", resize: "vertical", minHeight: "70px", width: "100%", boxSizing: "border-box", fontFamily: "inherit" }}
+                  />
+                </div>
+
+                {/* Starter Prompts UI */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "16px", borderTop: "1px solid #ebebeb" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <label style={{ fontSize: "13px", fontWeight: "500", display: "block" }}>Starter Prompts</label>
+                      <span style={{ fontSize: "12px", color: "#8c9196" }}>Suggested questions (Max 3)</span>
+                    </div>
+                    {starterPrompts.length < 3 && (
+                      <button
+                        onClick={addStarterPrompt}
+                        style={{ background: "none", border: "none", color: "#202223", fontSize: "12px", fontWeight: "600", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                      >
+                        + Add Prompt
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {starterPrompts.map((prompt, index) => (
+                      <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <input
+                          value={prompt}
+                          onChange={(e) => updateStarterPrompt(index, e.target.value)}
+                          placeholder="e.g. What are your shipping options?"
+                          style={{ flex: 1, padding: "7px 12px", border: "1px solid #c9cccf", borderRadius: "4px", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }}
+                        />
+                        <button
+                          onClick={() => removeStarterPrompt(index)}
+                          title="Remove prompt"
+                          style={{ background: "none", border: "none", color: "#8c9196", cursor: "pointer", fontSize: "18px", padding: "0 4px", display: "flex", alignItems: "center" }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Brand Logo & Avatar */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "16px", borderTop: "1px solid #ebebeb" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{ fontSize: "13px", fontWeight: "500" }}>Brand Logo & Avatar</label>
+                    <input id="logo-upload" type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={handleLogoUpload} />
+                    <button
+                      onClick={() => document.getElementById("logo-upload").click()}
+                      style={{ background: "none", border: "none", color: "#202223", fontSize: "12px", fontWeight: "600", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                    >
+                      Upload custom
                     </button>
+                  </div>
+                  {logoError && <span style={{ color: "#d82c0d", fontSize: "12px" }}>{logoError}</span>}
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    <div style={{ width: "40px", height: "40px", borderRadius: "6px", backgroundColor: settings.logoUrl ? "#f4f6f8" : selectedPreset.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #dfe3e8", flexShrink: 0 }}>
+                      {settings.logoUrl ? <img src={settings.logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : selectedPreset.icon}
+                    </div>
+
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {PRESETS.map((preset) => (
+                        <div
+                          key={preset.id}
+                          onClick={() => { updateSetting("avatarPreset", preset.id); updateSetting("logoUrl", ""); setLogoError(null); }}
+                          style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: preset.bg, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", outline: settings.avatarPreset === preset.id && !settings.logoUrl ? "2px solid #202223" : "1px solid #dfe3e8", outlineOffset: "2px", boxSizing: "border-box" }}
+                        >
+                          <div style={{ width: "20px", height: "20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {preset.icon}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Brand Color */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "16px", borderTop: "1px solid #ebebeb" }}>
+                  <label style={{ fontSize: "13px", fontWeight: "500" }}>Brand Color</label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {getBrandPresets(themeColor).slice(0, 6).map((color, i) => (
+                        <div
+                          key={i}
+                          onClick={() => updateSetting("brandColor", color)}
+                          style={{ width: "24px", height: "24px", borderRadius: "4px", backgroundColor: color, cursor: "pointer", outline: settings.brandColor === color ? "2px solid #202223" : "1px solid #dfe3e8", outlineOffset: "1px", boxSizing: "border-box" }}
+                        />
+                      ))}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #c9cccf", borderRadius: "6px", padding: "4px 8px", backgroundColor: "#fff" }}>
+                      <div style={{ width: "16px", height: "16px", borderRadius: "3px", backgroundColor: settings.brandColor, flexShrink: 0, border: "1px solid #dfe3e8" }} />
+                      <input
+                        value={settings.brandColor}
+                        onChange={(e) => updateSetting("brandColor", e.target.value)}
+                        style={{ border: "none", outline: "none", fontSize: "13px", width: "65px", background: "transparent", color: "#202223", fontFamily: "monospace" }}
+                      />
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN: AI Capabilities Sidebar */}
+            <div style={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e3e5e7", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", padding: "24px" }}>
+              <h2 style={{ fontSize: "13px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 4px 0", color: "#6d7175" }}>AI Capabilities</h2>
+              <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px 0" }}>Enable or disable features.</p>
+
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {[
+                  { id: "capProducts", label: "Product Recommendations", desc: "Suggest items contextually" },
+                  { id: "capOrderTracking", label: "Order Tracking", desc: "Lookup tracking numbers" },
+                  { id: "capPolicies", label: "Store Policies", desc: "Answer simple shipping/return queries" },
+                  { id: "capFaqs", label: "Custom FAQs", desc: "Use explicit Q&A sets" }
+                ].map(({ id, label, desc }, index) => (
+                  <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderTop: index !== 0 ? "1px solid #f1f2f3" : "none" }}>
+                    <div style={{ paddingRight: "8px" }}>
+                      <div style={{ fontSize: "13px", fontWeight: "500", color: "#202223" }}>{label}</div>
+                      <div style={{ fontSize: "12px", color: "#8c9196", marginTop: "2px" }}>{desc}</div>
+                    </div>
+                    <div
+                      onClick={() => updateSetting(id, !settings[id])}
+                      style={{ width: "36px", height: "20px", backgroundColor: settings[id] ? "#202223" : "#dfe3e8", borderRadius: "10px", position: "relative", cursor: "pointer", transition: "background-color 0.2s", flexShrink: 0 }}
+                    >
+                      <div style={{ width: "16px", height: "16px", backgroundColor: "#fff", borderRadius: "50%", position: "absolute", top: "2px", left: settings[id] ? "18px" : "2px", transition: "left 0.2s", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "16px", borderTop: "1px solid #ebebeb" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label style={{ fontSize: "13px", fontWeight: "500" }}>Brand Logo & Avatar</label>
-                <input id="logo-upload" type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={handleLogoUpload} />
-                <button
-                  onClick={() => document.getElementById("logo-upload").click()}
-                  style={{ background: "none", border: "none", color: "#202223", fontSize: "12px", fontWeight: "600", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-                >
-                  Upload custom
-                </button>
-              </div>
-              {logoError && <span style={{ color: "#d82c0d", fontSize: "12px" }}>{logoError}</span>}
-
-              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                <div style={{ width: "40px", height: "40px", borderRadius: "6px", backgroundColor: settings.logoUrl ? "#f4f6f8" : selectedPreset.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #dfe3e8", flexShrink: 0 }}>
-                  {settings.logoUrl ? <img src={settings.logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : selectedPreset.icon}
-                </div>
-
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  {PRESETS.map((preset) => (
-                    <div
-                      key={preset.id}
-                      onClick={() => { updateSetting("avatarPreset", preset.id); updateSetting("logoUrl", ""); setLogoError(null); }}
-                      style={{ width: "30px", height: "30px", borderRadius: "6px", backgroundColor: preset.bg, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", outline: settings.avatarPreset === preset.id && !settings.logoUrl ? "2px solid #202223" : "1px solid #dfe3e8", outlineOffset: "2px", boxSizing: "border-box" }}
-                    >
-                      <div style={{ width: "20px", height: "20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {preset.icon}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "16px", borderTop: "1px solid #ebebeb" }}>
-              <label style={{ fontSize: "13px", fontWeight: "500" }}>Brand Color</label>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-                
-                {/* Presets Group */}
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  {getBrandPresets(themeColor).slice(0, 6).map((color, i) => (
-                    <div
-                      key={i}
-                      onClick={() => updateSetting("brandColor", color)}
-                      style={{ width: "24px", height: "24px", borderRadius: "4px", backgroundColor: color, cursor: "pointer", outline: settings.brandColor === color ? "2px solid #202223" : "1px solid #dfe3e8", outlineOffset: "1px", boxSizing: "border-box" }}
-                    />
-                  ))}
-                </div>
-
-                {/* Custom Hex Input (Pushed to Right) */}
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #c9cccf", borderRadius: "6px", padding: "4px 8px", backgroundColor: "#fff" }}>
-                  <div style={{ width: "16px", height: "16px", borderRadius: "3px", backgroundColor: settings.brandColor, flexShrink: 0, border: "1px solid #dfe3e8" }} />
-                  <input
-                    value={settings.brandColor}
-                    onChange={(e) => updateSetting("brandColor", e.target.value)}
-                    style={{ border: "none", outline: "none", fontSize: "13px", width: "65px", background: "transparent", color: "#202223", fontFamily: "monospace" }}
-                  />
-                </div>
-                
-              </div>
-            </div>
-
           </div>
-        </div>
-
-        {/* RIGHT COLUMN: Capabilities + Save */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-
-          <div style={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e3e5e7", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", padding: "24px" }}>
-            <h2 style={{ fontSize: "13px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 4px 0", color: "#6d7175" }}>AI Capabilities</h2>
-            <p style={{ fontSize: "13px", color: "#6d7175", margin: "0 0 16px 0" }}>Enable or disable specific features.</p>
-
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {[
-                { id: "capProducts", label: "Product Recommendations", desc: "Suggest products based on customer questions" },
-                { id: "capOrderTracking", label: "Order Tracking", desc: "Let customers check order status via chat" },
-                { id: "capPolicies", label: "Store Policies", desc: "Answer shipping, returns, and policy questions" },
-                { id: "capFaqs", label: "Custom FAQs", desc: "Use your saved FAQ entries in responses" }
-              ].map(({ id, label, desc }, index) => (
-                <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderTop: index !== 0 ? "1px solid #f1f2f3" : "none" }}>
-                  <div>
-                    <div style={{ fontSize: "13px", fontWeight: "500", color: "#202223" }}>{label}</div>
-                    <div style={{ fontSize: "12px", color: "#8c9196", marginTop: "2px" }}>{desc}</div>
-                  </div>
-                  <div
-                    onClick={() => updateSetting(id, !settings[id])}
-                    style={{ width: "36px", height: "20px", backgroundColor: settings[id] ? "#202223" : "#dfe3e8", borderRadius: "10px", position: "relative", cursor: "pointer", transition: "background-color 0.2s", flexShrink: 0 }}
-                  >
-                    <div style={{ width: "16px", height: "16px", backgroundColor: "#fff", borderRadius: "50%", position: "absolute", top: "2px", left: settings[id] ? "18px" : "2px", transition: "left 0.2s", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ padding: "20px 24px", display: "flex", justifyContent: "flex-end" }}>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              style={{ backgroundColor: "#202223", color: "#fff", border: "none", padding: "9px 20px", borderRadius: "6px", fontSize: "13px", fontWeight: "600", cursor: isSaving ? "not-allowed" : "pointer", opacity: isSaving ? 0.7 : 1 }}
-            >
-              {isSaving ? "Saving..." : "Save Settings"}
-            </button>
-          </div>
-
         </div>
       </div>
-    </div>
-  </div>
     </AppProvider>
   );
 }
