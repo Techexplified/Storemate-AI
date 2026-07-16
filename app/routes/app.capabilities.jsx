@@ -3,6 +3,7 @@ import { authenticate } from "../shopify.server";
 import { AppProvider, Text, Banner } from "@shopify/polaris";
 import db from "../db.server";
 import { useState } from "react";
+import enTranslations from "@shopify/polaris/locales/en.json";
 
 const ICONS = {
     capProducts: (
@@ -148,6 +149,7 @@ export default function Capabilities() {
     const enabledCount = Object.values(selected).filter(Boolean).length;
 
     return (
+        <AppProvider i18n={enTranslations}>
         <div style={{ minHeight: "100vh", background: "#f6f6f7", display: "flex", flexDirection: "column" }}>
 
             {/* Header */}
@@ -264,5 +266,6 @@ export default function Capabilities() {
                 </div>
             </div>
         </div>
+        </AppProvider>
     );
 }
