@@ -67,7 +67,7 @@
       .sm-lead-actions button { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; }
       #sm-lead-popup-skip { background: #f3f4f6; color: #4b5563; }
       #sm-lead-submit { background: ${config?.brandColor || '#00A460'}; color: white; }
-      .sm-indicator { font-style: italic; color: #9ca3af; box-shadow: none; background: transparent; border: none; padding: 4px 0; }
+      .sm-indicator { font-style: italic; color: #9ca3af; box-shadow: none; background: transparent; border: none; padding: 4px 12px; }
       
       /* Accordion FAQ styles */
       .sm-faq-item { background: white; margin-bottom: 8px; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }

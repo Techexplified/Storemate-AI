@@ -180,12 +180,12 @@ export default function Settings() {
 
             {/* Main Call to Action moved to Top Header for better access */}
             <div style={{ display: "flex", gap: "8px" }}>
-              <button
+              {/* <button
                 onClick={() => navigate(`/app/dashboard`)}
                 style={{ color: "#202223", backgroundColor: "#fff", border: "1px solid #c9cccf", padding: "10px 20px", borderRadius: "6px", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}
               >
                 ⟵Back
-              </button>
+              </button> */}
               <button
                 onClick={handleSave}
                 disabled={isSaving}
