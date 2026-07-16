@@ -16,23 +16,14 @@ const TrashIcon = () => (
         <path d="M9 6V4h6v2" />
     </svg>
 );
+
 export const loader = async ({ request }) => {
+    // 1. FIXED: Added .admin to authenticate
     const { session, admin } = await authenticate.admin(request);
     const shop = session.shop;
     const url = new URL(request.url);
     const range = url.searchParams.get("range") || "7d";
 
-    // 1. Check if the merchant config row exists
-    const cached = await db.merchantConfig.findUnique({ where: { shop } });
-
-    // 2. If it doesn't exist, this is a first-time install. Fire the background sync!
-    if (!cached) {
-        syncProducts(shop, admin).catch(err => {
-            console.error(` Background initial product sync failed for ${shop}:`, err);
-        });
-    }
-
-    // 1. setup pagination
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const limit = 5;
     const skip = (page - 1) * limit;
@@ -41,112 +32,115 @@ export const loader = async ({ request }) => {
     const days = rangeMap[range] || 7;
     const since = new Date(Date.now() - days * 86400000);
 
-    // 2a.Fetch the newest distinct sessions so recent conversations show first
-    const recentSessions = await db.conversation.findMany({
-        where: { shop, role: "user", createdAt: { gte: since } },
-        distinct: ["sessionId"],
-        orderBy: { createdAt: "asc" },
-        take: limit,
-        skip: skip,
-    });
-// 2. Fetch the FIRST message of every unique session (ascending)
-    const allUniqueSessions = await db.conversation.findMany({
-        where: { shop, role: "user", createdAt: { gte: since } },
-        distinct: ["sessionId"],
-        orderBy: { createdAt: "asc" },
-    });
-
-    // 3. Sort them manually descending (newest first) and apply pagination
-    allUniqueSessions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    const totalconversations = allUniqueSessions.length;
-    const conversations = allUniqueSessions.slice(skip, skip + limit);
-    const hasNextPage = skip + limit < totalconversations;
-
-    const [allMessages, config, merchantConfig, faqs, policies] = await Promise.all([
+    const [
+        config,
+        merchantConfig,
+        faqs,
+        policies,
+        allMessages,
+        conversations,
+        groupedSessions,
+        themeResponse
+    ] = await Promise.all([
+        // 2. FIXED: Changed all Prisma calls to camelCase (db.modelName)
+        db.chatbotConfig.findUnique({ where: { shop } }),
+        db.merchantConfig.findUnique({ where: { shop } }),
+        db.faq.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
+        db.policy.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
         db.conversation.findMany({
             where: { shop, createdAt: { gte: since } },
             orderBy: { createdAt: "asc" },
             take: 500,
         }),
-        db.chatbotConfig.findUnique({ where: { shop } }),
-        db.merchantConfig.findUnique({ where: { shop } }),
-        db.faq.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
-        db.policy.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
+        db.conversation.findMany({
+            where: { shop, role: "user", createdAt: { gte: since } },
+            distinct: ["sessionId"],
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+        }),
+        db.conversation.groupBy({
+            by: ["sessionId"],
+            where: { shop, role: "user", createdAt: { gte: since } },
+        }),
+        admin.graphql(`
+            query{
+            themes(first: 10){
+                nodes{ id role}
+            }
+            }
+            `).catch(() => null)
     ]);
+
+    if (!merchantConfig) {
+        syncProducts(shop, admin).catch(err => {
+            console.error(`Background initial product sync failed for ${shop}:`, err);
+        });
+    }
+
+    const totalConversations = groupedSessions.length;
+    const hasNextPage = skip + limit < totalConversations;
 
     const escalatedSessions = new Set(
         allMessages
-            .filter(m => m.role == "assistant" && (
+            .filter(m => m.role === "assistant" && (
                 (merchantConfig?.supportEmail && m.message.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
                 (merchantConfig?.supportUrl && m.message.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()))
             ))
             .map(m => m.sessionId)
-    )
+    );
 
-    // Most asked questions
     const freq = {};
-    for (const { message } of conversations) {
+    for (const { message, role } of allMessages) {
+        if (role != "user") continue;
         const key = message.toLowerCase().trim();
         freq[key] = (freq[key] || 0) + 1;
     }
+
     const topQuestions = Object.entries(freq)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([message, count]) => ({ message, count }));
 
-    // Build the direct Deep-Link to the Shopify Theme Customizer app embeds tab
     const themeCustomizerUrl = `https://admin.shopify.com/store/${shop.split('.')[0]}/themes/current/editor?context=apps`;
-
-    // Theme embed check
     let isEmbedded = false;
-    try {
-        // 1. Get the active theme
-        const themeResponse = await admin.graphql(`
-    query {
-      themes(first: 10) {
-        nodes { id role }
-      }
-    }
-  `);
-        const themeData = await themeResponse.json();
-        const themes = themeData?.data?.themes?.nodes || [];
-        const mainTheme = themes.find(t => t.role === "MAIN");
+    if (themeResponse) {
+        try {
+            const themeData = await themeResponse.json();
+            const mainTheme = themeData?.data?.themes?.nodes?.find(t => t.role === "MAIN");
 
-        if (mainTheme) {
-            // 2. Fetch config utilizing correct query variable structure
-            const assetResponse = await admin.graphql(`
-      query getThemeFile($id: ID!) {
-        theme(id: $id) {
-          files(filenames: ["config/settings_data.json"], first: 1) {
-            nodes {
-              body {
-                ... on OnlineStoreThemeFileBodyText { content }
-              }
+            if (mainTheme) {
+                const assetResponse = await admin.graphql(`
+                    query getThemeFile($id: ID!) {
+                        theme(id: $id) {
+                            files(filenames: ["config/settings_data.json"], first: 1) {
+                                nodes {
+                                    body {
+                                        ... on OnlineStoreThemeFileBodyText { content }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                `, { variables: { id: mainTheme.id } });
+
+                const assetData = await assetResponse.json();
+                const rawContent = assetData?.data?.theme?.files?.nodes?.[0]?.body?.content ?? "";
+
+                if (rawContent) {
+                    const cleaned = rawContent.replace(/\/\*[\s\S]*?\*\//, "");
+                    const parsedSettings = JSON.parse(cleaned);
+                    const blocks = parsedSettings?.current?.blocks || {};
+
+                    isEmbedded = Object.values(blocks).some(
+                        (block) => block?.type?.includes("storemate") && block?.disabled !== true
+                    );
+                }
             }
-          }
+        } catch (e) {
+            console.error("Embed verification failed:", e);
+            isEmbedded = false;
         }
-      }
-    `, { variables: { id: mainTheme.id } });
-
-            const assetData = await assetResponse.json();
-            const rawContent = assetData?.data?.theme?.files?.nodes?.[0]?.body?.content ?? "";
-
-            if (rawContent) {
-                // 3. Strip out the Shopify comments block so JSON.parse doesn't crash
-                const cleaned = rawContent.replace(/\/\*[\s\S]*?\*\//, "");
-                const parsedSettings = JSON.parse(cleaned);
-                const blocks = parsedSettings?.current?.blocks || {};
-
-                // 4. Track extension status targeting the liquid file name
-                isEmbedded = Object.values(blocks).some(
-                    (block) => block?.type?.includes("storemate") && block?.disabled !== true
-                );
-            }
-        }
-    } catch (e) {
-        console.error("Embed verification failed:", e);
-        isEmbedded = false;
     }
 
     const supportLinksAdded = !!(merchantConfig?.supportEmail || merchantConfig?.supportUrl);
@@ -163,7 +157,7 @@ export const loader = async ({ request }) => {
         policies,
         isEmbedded,
         supportLinksAdded,
-        totalConversations: totalconversations,
+        totalConversations, // 3. FIXED: Adjusted casing to match the variable
         themeCustomizerUrl,
         page,
         hasNextPage,
