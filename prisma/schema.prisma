@@ -93,4 +93,5 @@ model Conversation {
   @@index([shop])
   @@index([shop,createdAt])
   @@index([shop,role,createdAt])
+  @@index([shop,sessionId])
 }
