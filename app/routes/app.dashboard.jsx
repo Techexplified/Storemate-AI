@@ -303,6 +303,26 @@ export default function Dashboard() {
     const fetcher = useFetcher();
     const [deleteModalConfig, setDeleteModalConfig] = useState({ isOpen: false, intent: "", sessionId: null });
     const drawerFetcher = useFetcher();
+    const pollFetcher = useFetcher();
+    const [liveConversations, setLiveConversations] = useState(conversations);
+    const [liveEscalated, setLiveEscalated] = useState(new Set(escalatedSessions));
+    const [liveTotal , setLiveTotal] = useState(totalConversations);
+    const liveHasNextPage = (page - 1) * 5 + 5 < liveTotal;
+
+    useEffect(() => {
+        if(pollFetcher.data){
+            setLiveConversations(pollFetcher.data.conversations);
+            setLiveEscalated(new Set(pollFetcher.data.escalatedSessions));
+            setLiveTotal(pollFetcher.data.totalConversations);
+        }
+    },[pollFetcher.data]);
+
+    useEffect(() => {
+        const id = setInterval(()=> {
+            pollFetcher.load(`/app/dashboard/poll?range=${range}&page=${page}`);
+        }, 5000);
+        return () => clearInterval(id);
+    }, [range,page]);
 
     const openDrawer = (sessionId) => {
         setSelectedSession(sessionId);
@@ -454,8 +474,8 @@ export default function Dashboard() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {conversations.slice(0, 10).map(c => {
-                                    const isEscalated = escalatedSessions.has(c.sessionId);
+                                {liveConversations.slice(0, 10).map(c => {
+                                    const isEscalated = liveEscalated.has(c.sessionId);
 
                                     return (
                                         <tr key={c.id}>
@@ -506,7 +526,7 @@ export default function Dashboard() {
                         </table>
                     )}
 
-                    {totalConversations > 5 && (
+                    {liveTotal > 5 && (
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px" }}>
                             <span style={{ fontSize: "12px", color: "#9ca3af" }}>
                                 Page {page} (Total conversations: {totalConversations})
@@ -525,7 +545,7 @@ export default function Dashboard() {
                                 </button>
                                 <button
                                     className="dash-btn"
-                                    disabled={!hasNextPage}
+                                    disabled={!liveHasNextPage}
                                     onClick={() => {
                                         const params = new URLSearchParams(searchParams);
                                         params.set("page", (page + 1).toString());
