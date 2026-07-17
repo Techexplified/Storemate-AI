@@ -49,13 +49,13 @@ export const loader = async ({ request }) => {
         db.faq.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
         db.policy.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
         db.conversation.findMany({
-            where: { shop,role: "user", createdAt: { gte: since } },
-            select: {message: true},
+            where: { shop, role: "user", createdAt: { gte: since } },
+            select: { message: true },
             take: 500,
         }),
         db.conversation.findMany({
-            where:{ shop , role: "assistant", createdAt: {gte: since}},
-            select: {sessionId: true , message:true  },
+            where: { shop, role: "assistant", createdAt: { gte: since } },
+            select: { sessionId: true, message: true },
         }),
         db.conversation.findMany({
             where: { shop, role: "user", createdAt: { gte: since } },
@@ -86,24 +86,24 @@ export const loader = async ({ request }) => {
     const totalConversations = groupedSessions.length;
     const hasNextPage = skip + limit < totalConversations;
 
- const escalatedSessions = new Set(
-    assistantMessages
-        .filter(m =>
-            (merchantConfig?.supportEmail && m.message.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
-            (merchantConfig?.supportUrl && m.message.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()))
-        )
-        .map(m => m.sessionId)
-);
+    const escalatedSessions = new Set(
+        assistantMessages
+            .filter(m =>
+                (merchantConfig?.supportEmail && m.message.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
+                (merchantConfig?.supportUrl && m.message.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()))
+            )
+            .map(m => m.sessionId)
+    );
 
-const freq = {};
-for (const { message } of userMessages) {
-    const key = message.toLowerCase().trim();
-    freq[key] = (freq[key] || 0) + 1;
-}
-const topQuestions = Object.entries(freq)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([message, count]) => ({ message, count }));;
+    const freq = {};
+    for (const { message } of userMessages) {
+        const key = message.toLowerCase().trim();
+        freq[key] = (freq[key] || 0) + 1;
+    }
+    const topQuestions = Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([message, count]) => ({ message, count }));;
 
     const themeCustomizerUrl = `https://admin.shopify.com/store/${shop.split('.')[0]}/themes/current/editor?context=apps`;
     let isEmbedded = false;
@@ -306,26 +306,30 @@ export default function Dashboard() {
     const [deleteModalConfig, setDeleteModalConfig] = useState({ isOpen: false, intent: "", sessionId: null });
     const drawerFetcher = useFetcher();
     const pollFetcher = useFetcher();
+    const [currentPage, setCurrentPage] = useState(page);
+
     const [liveConversations, setLiveConversations] = useState(conversations);
     const [liveEscalated, setLiveEscalated] = useState(new Set(escalatedSessions));
-    const [liveTotal , setLiveTotal] = useState(totalConversations);
-    const liveHasNextPage = (page - 1) * 5 + 5 < liveTotal;
+    const [liveTotal, setLiveTotal] = useState(totalConversations);
+    const [liveHasNextPage, setLiveHasNextPage] = useState(hasNextPage);
 
     useEffect(() => {
-        if(pollFetcher.data){
-            setLiveConversations(pollFetcher.data.conversations);
-            setLiveEscalated(new Set(pollFetcher.data.escalatedSessions));
-            setLiveTotal(pollFetcher.data.totalConversations);
+        if (pollFetcher.data) {
+            setLiveConversations(pollFetcher.data.conversations || liveConversations);
+            setLiveEscalated(new Set(pollFetcher.data.escalatedSessions || Array.from(liveEscalated)));
+            setLiveTotal(pollFetcher.data.totalConversations ?? liveTotal);
+            setLiveHasNextPage(pollFetcher.data.hasNextPage ?? liveHasNextPage);
         }
-    },[pollFetcher.data]);
+    }, [pollFetcher.data]);
 
     useEffect(() => {
-        const id = setInterval(()=> {
-            pollFetcher.load(`/app/dashboard/poll?range=${range}&page=${page}`);
+        const id = setInterval(() => {
+            if (pollFetcher.state === "idle") {
+                pollFetcher.load(`/app/dashboard/conversations?range=${range}&page=${currentPage}`);
+            }
         }, 5000);
         return () => clearInterval(id);
-    }, [range,page]);
-
+    }, [range, currentPage, pollFetcher.state]);
     const openDrawer = (sessionId) => {
         setSelectedSession(sessionId);
         drawerFetcher.load(`/app/dashboard/messages?sessionId=${sessionId}`);
@@ -527,20 +531,19 @@ export default function Dashboard() {
                             </tbody>
                         </table>
                     )}
-
                     {liveTotal > 5 && (
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px" }}>
                             <span style={{ fontSize: "12px", color: "#9ca3af" }}>
-                                Page {page} (Total conversations: {totalConversations})
+                                Page {currentPage} (Total conversations: {liveTotal})
                             </span>
                             <div style={{ display: "flex", gap: "8px" }}>
                                 <button
                                     className="dash-btn"
-                                    disabled={page <= 1}
+                                    disabled={currentPage <= 1}
                                     onClick={() => {
-                                        const params = new URLSearchParams(searchParams);
-                                        params.set("page", (page - 1).toString());
-                                        setSearchParams(params);
+                                        const newPage = currentPage - 1;
+                                        setCurrentPage(newPage);
+                                        pollFetcher.load(`/app/dashboard/conversations?range=${range}&page=${newPage}`);
                                     }}
                                 >
                                     ← Previous
@@ -549,9 +552,9 @@ export default function Dashboard() {
                                     className="dash-btn"
                                     disabled={!liveHasNextPage}
                                     onClick={() => {
-                                        const params = new URLSearchParams(searchParams);
-                                        params.set("page", (page + 1).toString());
-                                        setSearchParams(params);
+                                        const newPage = currentPage + 1;
+                                        setCurrentPage(newPage);
+                                        pollFetcher.load(`/app/dashboard/conversations?range=${range}&page=${newPage}`);
                                     }}
                                 >
                                     Next →
