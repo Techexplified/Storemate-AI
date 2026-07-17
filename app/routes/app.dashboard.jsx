@@ -37,7 +37,8 @@ export const loader = async ({ request }) => {
         merchantConfig,
         faqs,
         policies,
-        allMessages,
+        userMessages,
+        assistantMessages,
         conversations,
         groupedSessions,
         themeResponse
@@ -48,9 +49,13 @@ export const loader = async ({ request }) => {
         db.faq.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
         db.policy.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
         db.conversation.findMany({
-            where: { shop, createdAt: { gte: since } },
-            orderBy: { createdAt: "asc" },
+            where: { shop,role: "user", createdAt: { gte: since } },
+            select: {message: true},
             take: 500,
+        }),
+        db.conversation.findMany({
+            where:{ shop , role: "assistant", createdAt: {gte: since}},
+            select: {sessionId: true , message:true  },
         }),
         db.conversation.findMany({
             where: { shop, role: "user", createdAt: { gte: since } },
@@ -81,26 +86,24 @@ export const loader = async ({ request }) => {
     const totalConversations = groupedSessions.length;
     const hasNextPage = skip + limit < totalConversations;
 
-    const escalatedSessions = new Set(
-        allMessages
-            .filter(m => m.role === "assistant" && (
-                (merchantConfig?.supportEmail && m.message.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
-                (merchantConfig?.supportUrl && m.message.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()))
-            ))
-            .map(m => m.sessionId)
-    );
+ const escalatedSessions = new Set(
+    assistantMessages
+        .filter(m =>
+            (merchantConfig?.supportEmail && m.message.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
+            (merchantConfig?.supportUrl && m.message.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()))
+        )
+        .map(m => m.sessionId)
+);
 
-    const freq = {};
-    for (const { message, role } of allMessages) {
-        if (role != "user") continue;
-        const key = message.toLowerCase().trim();
-        freq[key] = (freq[key] || 0) + 1;
-    }
-
-    const topQuestions = Object.entries(freq)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([message, count]) => ({ message, count }));
+const freq = {};
+for (const { message } of userMessages) {
+    const key = message.toLowerCase().trim();
+    freq[key] = (freq[key] || 0) + 1;
+}
+const topQuestions = Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([message, count]) => ({ message, count }));;
 
     const themeCustomizerUrl = `https://admin.shopify.com/store/${shop.split('.')[0]}/themes/current/editor?context=apps`;
     let isEmbedded = false;
@@ -147,7 +150,6 @@ export const loader = async ({ request }) => {
 
     return data({
         conversations,
-        allMessages,
         escalatedSessions,
         topQuestions,
         range,
@@ -287,7 +289,7 @@ function Deletemodal({ intent, sessionId, onClose }) {
 }
 
 export default function Dashboard() {
-    const { conversations, allMessages, escalatedSessions, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl, page, hasNextPage } = useLoaderData();
+    const { conversations, escalatedSessions, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl, page, hasNextPage } = useLoaderData();
     const [searchParams, setSearchParams] = useSearchParams();
     const { revalidate } = useRevalidator();
     const navigate = useNavigate();
