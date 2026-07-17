@@ -302,6 +302,12 @@ export default function Dashboard() {
     const [policyText, setPolicyText] = useState("");
     const fetcher = useFetcher();
     const [deleteModalConfig, setDeleteModalConfig] = useState({ isOpen: false, intent: "", sessionId: null });
+    const drawerFetcher = useFetcher();
+
+    const openDrawer = (sessionId) => {
+        setSelectedSession(sessionId);
+        drawerFetcher.load(`/app/dashboard/messages?sessionId=${sessionId}`);
+    };
 
     // Show banner if not embedded — dismiss resets on every app open (no localStorage)
     useEffect(() => {
@@ -479,7 +485,7 @@ export default function Dashboard() {
                                             <td>
                                                 <button
                                                     className="conv-view-btn"
-                                                    onClick={() => setSelectedSession(c.sessionId)}
+                                                    onClick={() => openDrawer(c.sessionId)}
                                                 >
                                                     View ↗
                                                 </button>
@@ -790,9 +796,12 @@ export default function Dashboard() {
                                 <button className="setup-panel-close" onClick={() => setSelectedSession(null)}>✕</button>
                             </div>
                             <div className="conv-drawer-messages">
-                                {allMessages
-                                    .filter(c => c.sessionId === selectedSession)
-                                    .map(c => (
+                                {drawerFetcher.state === "loading" ? (
+                                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#9ca3af", fontSize: "13px" }}>
+                                        Loading conversation...
+                                    </div>
+                                ) : (
+                                    (drawerFetcher.data?.messages || []).map(c => (
                                         <div key={c.id} className={`conv-bubble-wrap ${c.role === "user" ? "bubble-user" : "bubble-ai"}`}>
                                             <div className={`conv-bubble ${c.role === "user" ? "bubble-user-msg" : "bubble-ai-msg"}`}>
                                                 {c.message}
@@ -800,7 +809,7 @@ export default function Dashboard() {
                                             <div className="bubble-time">{timeAgo(c.createdAt)}</div>
                                         </div>
                                     ))
-                                }
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1222,6 +1231,17 @@ export default function Dashboard() {
   background: #ffebe9;
   color: #cc1f1f;
 }
+/* Drawer Entry Animations */
+@keyframes smFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes smSlideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
 .conv-drawer-overlay {
     position: fixed;
     inset: 0;
@@ -1229,7 +1249,9 @@ export default function Dashboard() {
     z-index: 100;
     display: flex;
     justify-content: flex-end;
+    animation: smFadeIn 0.2s ease-out forwards;
 }
+
 .conv-drawer {
     width: 420px;
     height: 100%;
@@ -1237,6 +1259,7 @@ export default function Dashboard() {
     display: flex;
     flex-direction: column;
     box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+    animation: smSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .conv-drawer-header {
     display: flex;
