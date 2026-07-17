@@ -18,7 +18,6 @@ const TrashIcon = () => (
 );
 
 export const loader = async ({ request }) => {
-    // 1. FIXED: Added .admin to authenticate
     const { session, admin } = await authenticate.admin(request);
     const shop = session.shop;
     const url = new URL(request.url);
@@ -43,7 +42,6 @@ export const loader = async ({ request }) => {
         groupedSessions,
         themeResponse
     ] = await Promise.all([
-        // 2. FIXED: Changed all Prisma calls to camelCase (db.modelName)
         db.chatbotConfig.findUnique({ where: { shop } }),
         db.merchantConfig.findUnique({ where: { shop } }),
         db.faq.findMany({ where: { shop }, orderBy: { createdAt: "asc" } }),
@@ -159,7 +157,7 @@ export const loader = async ({ request }) => {
         policies,
         isEmbedded,
         supportLinksAdded,
-        totalConversations, // 3. FIXED: Adjusted casing to match the variable
+        totalConversations,
         themeCustomizerUrl,
         page,
         hasNextPage,
@@ -312,6 +310,7 @@ export default function Dashboard() {
     const [liveEscalated, setLiveEscalated] = useState(new Set(escalatedSessions));
     const [liveTotal, setLiveTotal] = useState(totalConversations);
     const [liveHasNextPage, setLiveHasNextPage] = useState(hasNextPage);
+    const [isPaginating, setIsPaginating] = useState(false);
 
     useEffect(() => {
         // When the global loader updates from a hard refresh, sync the state variables
@@ -327,6 +326,8 @@ export default function Dashboard() {
             setLiveEscalated(new Set(pollFetcher.data.escalatedSessions || Array.from(liveEscalated)));
             setLiveTotal(pollFetcher.data.totalConversations ?? liveTotal);
             setLiveHasNextPage(pollFetcher.data.hasNextPage ?? liveHasNextPage);
+
+             setIsPaginating(false);
         }
     }, [pollFetcher.data]);
 
@@ -487,7 +488,8 @@ export default function Dashboard() {
                                     <th>Delete</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            {/* Replace pollFetcher.state === "loading" with isPaginating */}
+<tbody className={`conv-table-body ${isPaginating ? "is-loading" : ""}`}>
                                 {liveConversations.slice(0, 10).map(c => {
                                     const isEscalated = liveEscalated.has(c.sessionId);
 
@@ -551,6 +553,7 @@ export default function Dashboard() {
                                     onClick={() => {
                                         const newPage = currentPage - 1;
                                         setCurrentPage(newPage);
+                                        setIsPaginating(true);
                                         pollFetcher.load(`/app/dashboard/conversations?range=${range}&page=${newPage}`);
                                     }}
                                 >
@@ -562,6 +565,7 @@ export default function Dashboard() {
                                     onClick={() => {
                                         const newPage = currentPage + 1;
                                         setCurrentPage(newPage);
+                                        setIsPaginating(true);
                                         pollFetcher.load(`/app/dashboard/conversations?range=${range}&page=${newPage}`);
                                     }}
                                 >
@@ -1482,6 +1486,16 @@ export default function Dashboard() {
 }
 .readiness-status-btn.status-done:hover {
   background: #008f54;
+}
+/* Table Pagination Animation */
+.conv-table-body {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.conv-table-body.is-loading {
+    opacity: 0.3;
+    transform: translateY(4px);
+    pointer-events: none; /* Prevents double-clicking buttons while loading */
 }
       `}</style>
         </AppProvider>
