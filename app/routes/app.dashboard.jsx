@@ -314,6 +314,14 @@ export default function Dashboard() {
     const [liveHasNextPage, setLiveHasNextPage] = useState(hasNextPage);
 
     useEffect(() => {
+        // When the global loader updates from a hard refresh, sync the state variables
+        setLiveConversations(conversations);
+        setLiveTotal(totalConversations);
+        setLiveHasNextPage(hasNextPage);
+        setLiveEscalated(new Set(escalatedSessions));
+    }, [conversations, totalConversations, hasNextPage, escalatedSessions]);
+
+    useEffect(() => {
         if (pollFetcher.data) {
             setLiveConversations(pollFetcher.data.conversations || liveConversations);
             setLiveEscalated(new Set(pollFetcher.data.escalatedSessions || Array.from(liveEscalated)));
