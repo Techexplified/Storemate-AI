@@ -3,7 +3,7 @@ import { data, useLoaderData, useFetcher, useSearchParams } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
-import KbTab from "../components/train/KbTab";
+import KbTab from "../components/train/Kbtab";
 import FaqTab from "../components/train/FaqTab";
 import SandboxPreview from "../components/train/SandboxPreview";
 
