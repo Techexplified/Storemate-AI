@@ -3,6 +3,7 @@ import { data } from "react-router";
 import db from "../db.server";
 import { chat } from "../lib/openai.server";
 import { buildSystemPrompt, lookupOrder } from "../lib/store-data.server";
+import { authenticate } from "../shopify.server";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -63,12 +64,18 @@ export const action = async ({ request }) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: HEADERS });
   if (request.method !== "POST") return data({ error: "Method not allowed" }, { status: 405, headers: HEADERS });
 
-  try {
-    const { shop, messages, sessionId, customerName = "Guest", customerEmail = null, orderLookup } = await request.json();
+ try {
+    const body = await request.json();
+    let { shop, messages, sessionId, customerName = "Guest", isPreview, customerEmail = null, orderLookup } = body;
+
+//     if (isPreview && !shop) {
+//       const { session } = await authenticate.admin(request);
+//       shop = session.shop;
+//     }
+
     if (!shop || !sessionId || (!messages?.length && !orderLookup)) {
       return data({ error: "Missing fields" }, { status: 400, headers: HEADERS });
-    };
-
+    }
 
     const config = await db.chatbotConfig.findUnique({ where: { shop } });
     if (!config) return data({ error: "Chatbot not configured" }, { status: 404, headers: HEADERS });
@@ -76,35 +83,33 @@ export const action = async ({ request }) => {
     if (orderLookup?.orderNumber && orderLookup?.email) {
       const order = await lookupOrder(shop, orderLookup.orderNumber, orderLookup.email);
       const reply = formatOrderReply(order, config.botName);
-      await logMessages(shop, sessionId, customerName, customerEmail, `[Order Tracking] #${orderLookup.orderNumber}`, reply);
+      if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, `[Order Tracking] #${orderLookup.orderNumber}`, reply);
       return data({ reply }, { headers: HEADERS });
     }
 
-    // Order lookup — no Gemini needed
     if (config.capOrderTracking) {
       const { orderNumber, email } = extractOrderInfo(messages);
-      console.log("Extracted:", { orderNumber, email });
 
       if (orderNumber && email) {
         const order = await lookupOrder(shop, orderNumber, email);
         const reply = formatOrderReply(order, config.botName);
-        await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
+        if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
         return data({ reply }, { headers: HEADERS });
       }
       if (orderNumber || email) {
         const reply = `To look up your order, I need both your order number and the email used at checkout. ${orderNumber ? "You gave the order number — what's the email?" : "You gave the email — what's the order number?"}`;
-        await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
+        if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
         return data({ reply }, { headers: HEADERS });
       }
     }
 
-    // Gemini
     const systemPrompt = await buildSystemPrompt(shop, null, config);
     const reply = await chat(messages, systemPrompt);
-    await logMessages(shop, sessionId, customerName, customerEmail, messages[messages.length - 1].content, reply);
+    if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, messages[messages.length - 1].content, reply);
     return data({ reply }, { headers: HEADERS });
 
   } catch (e) {
+    if (e instanceof Response) throw e;
     console.error("Chat error:", e);
     return data({ error: "Something went wrong" }, { status: 500, headers: HEADERS });
   }
