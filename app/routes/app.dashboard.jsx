@@ -377,7 +377,7 @@ export default function Dashboard() {
             done: supportLinksAdded,
             mandatory: true,
             disabled: false,
-            onSetup: () => setActivePanel(activePanel === "support" ? null : "support"),
+            onSetup: () => navigate("/app/train?tab=kb"),
         },
         {
             key: "embed",
@@ -393,7 +393,7 @@ export default function Dashboard() {
             done: faqs.length > 0,
             mandatory: false,
             disabled: !config?.capFaqs,
-            onSetup: () => setActivePanel(activePanel === "faqs" ? null : "faqs"),
+            onSetup: () => navigate("/app/train?tab=faqs"),
         },
         {
             key: "policies",
@@ -401,7 +401,7 @@ export default function Dashboard() {
             done: policies.length > 0,
             mandatory: false,
             disabled: !config?.capPolicies,
-            onSetup: () => setActivePanel(activePanel === "policies" ? null : "policies"),
+            onSetup: () => navigate("/app/train?tab=kb"),
         },
     ];
     const doneCount = readiness.filter(r => !r.disabled && r.done).length;
@@ -634,10 +634,11 @@ export default function Dashboard() {
                     </div>
 
                     {/* QUICK ACTIONS */}
-                    <div className="dash-card">
+<div className="dash-card">
                         <div className="dash-card-title" style={{ marginBottom: 12 }}>Quick Actions</div>
                         <div className="quick-actions">
                             <button className="qa-btn" onClick={() => navigate("/app/settings")}>✎ Customize Chatbot</button>
+                            <button className="qa-btn" onClick={() => navigate("/app/train")}>🧠 Train your AI</button>
                             {/* <button className="qa-btn" onClick={() => {
                                 fetcher.submit({}, { method: "POST", action: "/api/sync" });
                                 revalidate();

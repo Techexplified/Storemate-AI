@@ -108,8 +108,8 @@ export const action = async ({ request }) => {
     return data({ reply }, { headers: HEADERS });
 
   } catch (e) {
-    if (e instanceof Response) throw e;
+     if (e instanceof Response) throw e;
     console.error("Chat error:", e);
-    return data({ error: "Something went wrong" }, { status: 500, headers: HEADERS });
+    return data({ error: e.message || "Something went wrong" }, { status: 500, headers: HEADERS });
   }
 };
