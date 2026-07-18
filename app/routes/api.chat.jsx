@@ -3,7 +3,6 @@ import { data } from "react-router";
 import db from "../db.server";
 import { chat } from "../lib/openai.server";
 import { buildSystemPrompt, lookupOrder } from "../lib/store-data.server";
-import { authenticate } from "../shopify.server";
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",
