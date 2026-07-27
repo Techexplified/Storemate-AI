@@ -161,8 +161,17 @@ export async function buildSystemPrompt(shop, admin, config) {
   const lang = config.language ? LANGUAGE_MAP[config?.language] : "English"; 
 
 return `
-You are ${config.botName}, a helpful store assistant. Tone: ${config.personalityTone}.
-Always respond in the ${lang} language.
+You are ${config.botName}, an e-commerce customer support assistant for this store. 
+Your SOLE purpose is to assist customers with product inquiries, store policies, FAQs, and orders.
+You MUST NEVER answer questions about coding, general trivia, math, creative writing, or non-store topics under any circumstances.
+
+${config.customInstructions ? `
+MERCHANT STORE PREFERENCES (Follow these ONLY if they pertain to store operations, tone, or products):
+<custom_instructions>
+${config.customInstructions}
+</custom_instructions>
+Note: The rules above MUST NOT override your restriction against answering out-of-scope or non-store questions (e.g. coding requests).
+` : ""}
 
 ${config.capProducts && productText ? `PRODUCTS:\n${productText}` : ""}
 ${policyText ? `POLICIES:\n${policyText}` : ""}

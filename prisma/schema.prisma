@@ -49,6 +49,7 @@ model ChatbotConfig {
   capPolicies      Boolean @default(true)
   capFaqs          Boolean @default(true)
   setupComplete    Boolean  @default(false)
+  customInstructions String? 
 }
 
 model MerchantConfig {

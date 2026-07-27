@@ -44,6 +44,14 @@ export async function action({ request }) {
         });
       }
 
+      if(payload.customInstructions !== undefined){
+        await tx.chatbotConfig.upsert({
+          where: {shop},
+          update: {customInstructions: payload.customInstructions},
+          create: { shop, botName: "Aria", customInstructions: payload.customInstructions },
+        })
+      }
+
       // Fix for Policies
       for (const p of payload.policies ?? []) {
         if (p._deleted && typeof p.id === 'string') {
@@ -86,6 +94,7 @@ export default function TrainPage() {
   const currentTab = searchParams.get("tab") || "kb";
 
   const [supportUrl, setSupportUrl] = useState(loaderData.supportUrl);
+  const [customInstructions, setCustomInstructions] = useState(loaderData.chatbotConfig?.customInstructions || "");
   const [policies, setPolicies] = useState(loaderData.policies);
   const [faqs, setFaqs] = useState(loaderData.faqs);
   const [isDirty, setIsDirty] = useState(false);
@@ -95,13 +104,14 @@ export default function TrainPage() {
 
   useEffect(() => {
     setSupportUrl(loaderData.supportUrl);
+    setCustomInstructions(loaderData.chatbotConfig?.customInstructions || "");
     setPolicies(loaderData.policies);
     setFaqs(loaderData.faqs);
     setIsDirty(false);
   }, [loaderData]);
 
   const handleSave = () => {
-    const payload = { supportUrl, policies, faqs };
+    const payload = { supportUrl,customInstructions, policies, faqs };
     fetcher.submit({ intent: "train-save", payload: JSON.stringify(payload) }, { method: "post" });
   };
 
@@ -154,6 +164,8 @@ export default function TrainPage() {
             {currentTab === "kb" && (
               <KbTab 
                 supportUrl={supportUrl} setSupportUrl={(val) => { setSupportUrl(val); setIsDirty(true); }}
+                customInstructions={customInstructions} 
+                setCustomInstructions={(val) => { setCustomInstructions(val); setIsDirty(true); }}
                 policies={policies} setPolicies={(val) => { setPolicies(val); setIsDirty(true); }}
                 config={config} onDisabled={handleDisabledAction}
                 isDirty={isDirty}
@@ -182,7 +194,7 @@ export default function TrainPage() {
           </div>
           {!alertMsg && (
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => { setSupportUrl(loaderData.supportUrl); setPolicies(loaderData.policies); setFaqs(loaderData.faqs); setIsDirty(false); }} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', fontSize: '14px', fontWeight: '500', cursor: 'pointer', padding: '8px 12px' }}>Discard</button>
+              <button onClick={() => { setSupportUrl(loaderData.supportUrl); setCustomInstructions(loaderData.chatbotConfig?.customInstructions || ""); setPolicies(loaderData.policies); setFaqs(loaderData.faqs); setIsDirty(false); }} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', fontSize: '14px', fontWeight: '500', cursor: 'pointer', padding: '8px 12px' }}>Discard</button>
               <button onClick={handleSave} disabled={fetcher.state !== "idle"} style={{ background: '#fff', color: '#0f172a', border: 'none', padding: '10px 20px', borderRadius: '100px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>{fetcher.state === "submitting" ? "Saving..." : "Publish to Store"}</button>
             </div>
           )}

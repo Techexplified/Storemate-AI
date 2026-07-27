@@ -4,7 +4,7 @@ const LINK_MAX = 2048; // Increased from 30 to support actual URLs
 const TEXT_MAX = 5000;
 const isLink = (text) => /^https?:\/\//i.test((text || "").trim());
 
-export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies, config, onDisabled, isDirty }) {
+export default function KbTab({ supportUrl, setSupportUrl, customInstructions, setCustomInstructions, policies, setPolicies, config, onDisabled, isDirty }) {
   const [openPolicies, setOpenPolicies] = useState({});
   const [isAdding, setIsAdding] = useState(false);
   const [newPolicyName, setNewPolicyName] = useState("");
@@ -41,7 +41,7 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
     const newId = -Date.now();
     setPolicies([...policies, { id: newId, name: newPolicyName.trim(), text: newPolicyText }]);
     setOpenPolicies(prev => ({ ...prev, [newId]: true }));
-    
+
     // Reset form
     setIsAdding(false);
     setNewPolicyName("");
@@ -50,16 +50,16 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
   };
 
   const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', outline: 'none', color: '#0f172a', boxSizing: 'border-box' };
-  
+
   // Improved toggle button UI
-  const toggleBtnStyle = (active) => ({ 
+  const toggleBtnStyle = (active) => ({
     flex: 1,
-    padding: '8px 14px', 
-    border: '1px solid #cbd5e1', 
-    fontSize: '13px', 
-    fontWeight: '600', 
-    cursor: 'pointer', 
-    background: active ? '#f8fafc' : '#fff', 
+    padding: '8px 14px',
+    border: '1px solid #cbd5e1',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    background: active ? '#f8fafc' : '#fff',
     color: active ? '#0f172a' : '#64748b',
     boxShadow: active ? 'inset 0 1px 2px rgba(0,0,0,0.05)' : 'none',
     transition: 'all 0.15s ease'
@@ -83,8 +83,8 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
       <div>
         <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#334155' }}>Product Catalog</label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '8px' }}>
-           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16a34a' }}></div>
-           <div style={{ fontSize: '13px', fontWeight: '500', color: '#0f172a' }}>Synced automatically</div>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16a34a' }}></div>
+          <div style={{ fontSize: '13px', fontWeight: '500', color: '#0f172a' }}>Synced automatically</div>
         </div>
       </div>
 
@@ -114,12 +114,12 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
           {/* Add Policy Form */}
           {isAdding && (
             <div style={{ padding: '16px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-              
+
               <div style={{ display: 'flex', background: '#fff', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                <button onClick={() => { setNewPolicyType("link"); setNewPolicyText(""); }} style={{...toggleBtnStyle(newPolicyType === "link"), border: 'none', borderRight: '1px solid #cbd5e1'}}>
+                <button onClick={() => { setNewPolicyType("link"); setNewPolicyText(""); }} style={{ ...toggleBtnStyle(newPolicyType === "link"), border: 'none', borderRight: '1px solid #cbd5e1' }}>
                   🔗 Link
                 </button>
-                <button onClick={() => { setNewPolicyType("text"); setNewPolicyText(""); }} style={{...toggleBtnStyle(newPolicyType === "text"), border: 'none'}}>
+                <button onClick={() => { setNewPolicyType("text"); setNewPolicyText(""); }} style={{ ...toggleBtnStyle(newPolicyType === "text"), border: 'none' }}>
                   📄 Text
                 </button>
               </div>
@@ -135,7 +135,7 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
                   </div>
                 </div>
               )}
-              
+
               {newPolicyType === "text" && (
                 <div>
                   <textarea placeholder="Paste full policy content here..." maxLength={TEXT_MAX} style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }} value={newPolicyText} onChange={(e) => setNewPolicyText(e.target.value)} />
@@ -183,18 +183,18 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
 
                 {isOpen && config.capPolicies && (
                   <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                    
+
                     <div style={{ display: 'flex', background: '#fff', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1', marginBottom: '16px', width: 'fit-content' }}>
                       {["link", "text"].map(t => (
-                        <button 
-                          key={t} 
+                        <button
+                          key={t}
                           onClick={() => {
                             if (activeType !== t) {
                               setTypeChoice(prev => ({ ...prev, [p.id]: t }));
                               updatePolicy(p.id, ""); // Clears the content when switching types
                             }
-                          }} 
-                          style={{...toggleBtnStyle(activeType === t), border: 'none', borderRight: t === 'link' ? '1px solid #cbd5e1' : 'none'}}
+                          }}
+                          style={{ ...toggleBtnStyle(activeType === t), border: 'none', borderRight: t === 'link' ? '1px solid #cbd5e1' : 'none' }}
                         >
                           {t === "link" ? "Link " : "Text"}
                         </button>
@@ -205,8 +205,8 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
                       <div>
                         <input type="text" placeholder="https://yourstore.com/policy" maxLength={LINK_MAX} style={inputStyle} value={currentText} onChange={(e) => updatePolicy(p.id, e.target.value)} />
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                           <span style={{ fontSize: '12px', color: (currentText && !isLink(currentText)) ? '#ef4444' : 'transparent' }}>Should start with http:// or https://</span>
-                           <span style={{ fontSize: '11px', color: '#94a3b8' }}>{currentText.length}/{LINK_MAX}</span>
+                          <span style={{ fontSize: '12px', color: (currentText && !isLink(currentText)) ? '#ef4444' : 'transparent' }}>Should start with http:// or https://</span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{currentText.length}/{LINK_MAX}</span>
                         </div>
                       </div>
                     ) : (
@@ -220,8 +220,8 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
                       <button onClick={() => deletePolicy(p.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                         Remove Policy
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Remove Policy
                       </button>
                     </div>
                   </div>
@@ -230,6 +230,36 @@ export default function KbTab({ supportUrl, setSupportUrl, policies, setPolicies
             );
           })}
         </div>
+      </div>
+
+      {/* Custom Instructions & Rules */}
+      <div style={{ height: '1px', background: '#e2e8f0' }}></div>
+      <div>
+        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#334155' }}>
+          Custom Instructions & Rules
+        </label>
+        <p style={{ fontSize: '12.5px', color: '#64748b', marginTop: '4px', marginBottom: '8px' }}>
+          Add specific guidelines, store rules, or tone constraints for the AI to follow.
+        </p>
+        <textarea
+          style={{
+            width: '100%',
+            padding: '10px 14px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            fontSize: '14px',
+            outline: 'none',
+            color: '#0f172a',
+            boxSizing: 'border-box',
+            minHeight: '110px',
+            resize: 'vertical',
+            fontFamily: 'inherit',
+            lineHeight: '1.5'
+          }}
+          placeholder={`e.g.,\n- Always recommend our flagship product first.\n- Never guarantee exact shipping dates.\n- Keep answers concise and under 3 sentences.`}
+          value={customInstructions || ""}
+          onChange={(e) => setCustomInstructions(e.target.value)}
+        />
       </div>
     </div>
   );
