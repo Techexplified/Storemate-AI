@@ -77,7 +77,7 @@ export const loader = async ({ request }) => {
     return redirect(`/app/dashboard?${url.searchParams.toString()}`);
   }
 
-  // let themeColor = null;
+  let themeColor = null;
   // try {
   //   const response = await admin.graphql(`{ shop { brand { colors { primary { hex } } } } }`);
   //   const json = await response.json();
