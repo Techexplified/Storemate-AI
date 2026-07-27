@@ -77,12 +77,12 @@ export const loader = async ({ request }) => {
     return redirect(`/app/dashboard?${url.searchParams.toString()}`);
   }
 
-  let themeColor = null;
-  try {
-    const response = await admin.graphql(`{ shop { brand { colors { primary { hex } } } } }`);
-    const json = await response.json();
-    themeColor = json?.data?.shop?.brand?.colors?.primary?.[0]?.hex || null;
-  } catch (e) { }
+  // let themeColor = null;
+  // try {
+  //   const response = await admin.graphql(`{ shop { brand { colors { primary { hex } } } } }`);
+  //   const json = await response.json();
+  //   themeColor = json?.data?.shop?.brand?.colors?.primary?.[0]?.hex || null;
+  // } catch (e) { }
   return data({ config, shop: session.shop, themeColor });
 };
 
