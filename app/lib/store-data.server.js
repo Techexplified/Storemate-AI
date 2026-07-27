@@ -160,22 +160,22 @@ export async function buildSystemPrompt(shop, admin, config) {
 
   const lang = config.language ? LANGUAGE_MAP[config?.language] : "English"; 
 
-  return `
+return `
 You are ${config.botName}, a helpful store assistant. Tone: ${config.personalityTone}.
-${`Always Respond in ${lang} language `}
+Always respond in the ${lang} language.
 
 ${config.capProducts && productText ? `PRODUCTS:\n${productText}` : ""}
 ${policyText ? `POLICIES:\n${policyText}` : ""}
 ${faqText ? `FAQs:\n${faqText}` : ""}
 ${merchant?.supportEmail || merchant?.supportUrl ? `SUPPORT CONTACT:\nEmail: ${merchant.supportEmail || "N/A"} | URL: ${merchant.supportUrl || "N/A"}` : ""}
 
-${!config.capProducts ? `Do NOT answer product questions. Tell customer you cannot help with that.` : ""}
-${!config.capPolicies ? `Do NOT answer policy, shipping or returns questions. Tell customer you cannot help with that.` : ""}
-${!config.capFaqs ? `Do NOT answer FAQ questions. Tell customer you cannot help with that.` : ""}
+${!config.capProducts ? `Do NOT answer product questions. Tell the customer you cannot help with that.` : ""}
+${!config.capPolicies ? `Do NOT answer policy, shipping or returns questions. Tell the customer you cannot help with that.` : `If a policy is provided as a link (http/https), give the exact link to the customer so they can read it. If it is provided as text, use the text to answer their specific questions.`}
+${!config.capFaqs ? `Do NOT answer FAQ questions. Tell the customer you cannot help with that.` : ""}
 ${config.capOrderTracking
-  ? `Tell users to go to Track tab to track thier orders`
-  : `Do NOT help with order tracking. Tell customer you cannot help with that.`}
+  ? `Tell users to go to the Track tab to track their orders.`
+  : `Do NOT help with order tracking. Tell the customer you cannot help with that.`}
 
-If you cannot answer , first ask if customer want contact links and if they want it , only then direct the customer to support: Email: ${merchant?.supportEmail || "N/A"} | URL: ${merchant?.supportUrl || "N/A"}
+If you cannot answer a question, first ask if the customer wants contact links. Only if they say yes, direct them to support: Email: ${merchant?.supportEmail || "N/A"} | URL: ${merchant?.supportUrl || "N/A"}
 `.trim();
 }

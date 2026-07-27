@@ -39,6 +39,35 @@ const PRESETS = [
     },
 ];
 
+// Helper to parse URLs in string and return clickable React <a> elements
+const renderFormattedMessage = (text) => {
+  if (!text) return text;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: 'inherit',
+            textDecoration: 'underline',
+            fontWeight: '600',
+            wordBreak: 'break-all'
+          }}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function SandboxPreview({ config, faqs }) {
     const brandColor = config?.brandColor || "#00A460";
     const botName = config?.botName || "Aria";
@@ -124,7 +153,7 @@ export default function SandboxPreview({ config, faqs }) {
                 <div style={{ flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                     {messages.map((m, i) => (
                         <div key={i} style={{ marginBottom: '10px', maxWidth: '85%', padding: '10px 12px', borderRadius: '12px', fontSize: '12px', lineHeight: '1.4', wordBreak: 'break-word', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', background: m.role === 'user' ? brandColor : 'white', color: m.role === 'user' ? 'white' : '#111', marginLeft: m.role === 'user' ? 'auto' : '0', marginRight: m.role === 'user' ? '0' : 'auto', borderTopRightRadius: m.role === 'user' ? '4px' : '12px', borderTopLeftRadius: m.role === 'bot' ? '4px' : '12px', border: m.role === 'bot' ? '1px solid #e5e7eb' : 'none' }}>
-                            {m.content}
+                            {renderFormattedMessage(m.content)}
                         </div>
                     ))}
                     {isLoading && (

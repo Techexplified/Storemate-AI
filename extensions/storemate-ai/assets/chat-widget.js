@@ -306,22 +306,32 @@ function renderStarterPrompts() {
     }, delay);
   }
 
-  function appendMessage(role, text, isIndicator = false) {
+function appendMessage(role, text, isIndicator = false) {
     const history = document.getElementById('sm-chat-history');
     
     // 1. Create and add the new message bubble
     const msg = document.createElement('div');
     msg.className = `sm-msg ${role}${isIndicator ? ' sm-indicator' : ''}`;
-    msg.textContent = text;
+    
+    // 2. Safely escape text, then find URLs and make them clickable in a new tab
+    const safeText = esc(text);
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    
+    // Replace the plain text URL with a styled HTML link
+    msg.innerHTML = safeText.replace(
+      urlRegex, 
+      '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; font-weight: 600;">$1</a>'
+    );
+    
     history.appendChild(msg);
 
-    // 2. Grab the starter prompts container and force it to the bottom
+    // 3. Keep starter prompts at the bottom if they exist
     const starterContainer = document.getElementById('sm-starter-container');
     if (starterContainer) {
       history.appendChild(starterContainer); 
     }
 
-    // 3. Scroll to the bottom
+    // 4. Auto-scroll to the newest message
     document.getElementById('sm-panel-chat').scrollTop = 99999;
     
     return msg;

@@ -156,6 +156,7 @@ export default function TrainPage() {
                 supportUrl={supportUrl} setSupportUrl={(val) => { setSupportUrl(val); setIsDirty(true); }}
                 policies={policies} setPolicies={(val) => { setPolicies(val); setIsDirty(true); }}
                 config={config} onDisabled={handleDisabledAction}
+                isDirty={isDirty}
               />
             )}
             {currentTab === "faqs" && (
