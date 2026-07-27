@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-
 const PRESETS = [
     {
         id: "green", bg: "#22c55e", icon: (
@@ -103,7 +102,6 @@ export default function SandboxPreview({ config, faqs }) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     shop: config?.shop,
-                    // Filter out the initial welcome message so the AI gets a 'user' message first
                     messages: updatedMessages
                         .filter((m, i) => !(i === 0 && m.role === "bot"))
                         .map(m => ({
@@ -128,9 +126,13 @@ export default function SandboxPreview({ config, faqs }) {
 
             {/* Widget Header */}
             <div style={{ padding: '12px 14px', background: brandColor, color: 'white', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {config?.logoUrl ? (
-                        <img src={config.logoUrl} alt={botName} />
+                        <img 
+                          src={config.logoUrl} 
+                          alt={botName} 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} 
+                        />
                     ) : (
                         icon
                     )}
@@ -179,22 +181,52 @@ export default function SandboxPreview({ config, faqs }) {
                 </div>
             </div>
 
-            {/* FAQ Panel */}
-            <div style={{ flex: 1, display: activeTab === 'faq' ? 'block' : 'none', overflowY: 'auto', padding: '12px', background: '#f9fafb' }}>
+          {/* FAQ Panel */}
+            <div style={{ flex: 1, display: activeTab === 'faq' ? 'block' : 'none', overflowY: 'auto', padding: '0', background: '#f4f4f5' }}>
                 {activeFaqs.length === 0 ? (
-                    <div style={{ color: '#8e8e93', textAlign: 'center', marginTop: '20px', fontSize: '12px' }}>No FAQs available at the moment.</div>
+                    <div style={{ color: '#71717a', textAlign: 'center', marginTop: '24px', fontSize: '13px' }}>No FAQs available at the moment.</div>
                 ) : (
-                    activeFaqs.map(faq => (
-                        <div key={faq.id} style={{ background: 'white', marginBottom: '8px', borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                            <div onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)} style={{ fontWeight: '600', padding: '10px 12px', fontSize: '12px', color: '#111', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                {faq.question}
-                                <span style={{ fontSize: '12px', color: '#9ca3af', transform: openFaqId === faq.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
+                    activeFaqs.map((faq) => {
+                        const isOpen = openFaqId === faq.id;
+                        
+                        return (
+                            <div key={faq.id} style={{ borderBottom: '1px solid #e4e4e7', background: '#f4f4f5' }}>
+                                <div 
+                                    onClick={() => setOpenFaqId(isOpen ? null : faq.id)} 
+                                    style={{ 
+                                        fontWeight: '600', 
+                                        padding: '18px 20px', 
+                                        fontSize: '14px', 
+                                        color: '#09090b', 
+                                        cursor: 'pointer', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '16px', 
+                                        userSelect: 'none', 
+                                        transition: 'background 0.15s ease' 
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = '#ececee'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = '#f4f4f5'}
+                                >
+                                    <span style={{ fontSize: '20px', lineHeight: '1', fontWeight: '300', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#18181b' }}>
+                                        {isOpen ? '—' : '+'}
+                                    </span>
+                                    <span>{faq.question}</span>
+                                </div>
+                                <div style={{ 
+                                    display: 'grid', 
+                                    gridTemplateRows: isOpen ? '1fr' : '0fr', 
+                                    transition: 'grid-template-rows 0.3s ease'
+                                }}>
+                                    <div style={{ overflow: 'hidden' }}>
+                                        <div style={{ padding: '0 20px 20px 54px', fontSize: '13.5px', color: '#27272a', lineHeight: '1.6', fontWeight: '400' }}>
+                                            {faq.answer}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            {openFaqId === faq.id && (
-                                <div style={{ padding: '10px 12px', fontSize: '12px', color: '#4b5563', borderTop: '1px solid #f3f4f6', background: '#fafafa', lineHeight: '1.4' }}>{faq.answer}</div>
-                            )}
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 

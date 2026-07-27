@@ -69,13 +69,48 @@
       #sm-lead-submit { background: ${config?.brandColor || '#00A460'}; color: white; }
       .sm-indicator { font-style: italic; color: #9ca3af; box-shadow: none; background: transparent; border: none; padding: 4px 12px; }
       
-      /* Accordion FAQ styles */
-      .sm-faq-item { background: white; margin-bottom: 8px; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-      .sm-faq-q { font-weight: 600; padding: 10px 12px; font-size: 12px; color: #111; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: white; user-select: none; }
-      .sm-faq-q::after { content: '▾'; font-size: 12px; color: #9ca3af; transition: transform 0.2s; }
-      .sm-faq-item.open .sm-faq-q::after { transform: rotate(180deg); }
-      .sm-faq-a { display: none; padding: 10px 12px; font-size: 12px; color: #4b5563; border-top: 1px solid #f3f4f6; background: #fafafa; line-height: 1.4; }
-      .sm-faq-item.open .sm-faq-a { display: block; }
+/* Accordion FAQ styles matching image */
+      #sm-panel-faq { padding: 0; background: #f4f4f5; }
+      
+      .sm-faq-item { border-bottom: 1px solid #e4e4e7; background: #f4f4f5; }
+      
+      .sm-faq-q { 
+        font-weight: 500; 
+        font-size: 13.5px; 
+        color: #09090b; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        gap: 16px; 
+        padding: 18px 20px; 
+        user-select: none; 
+        transition: background 0.15s ease;
+      }
+      .sm-faq-q:hover { background: #ececee; }
+      
+      .sm-faq-icon { 
+        font-size: 20px; 
+        line-height: 1; 
+        font-weight: 300; 
+        width: 18px; 
+        height: 18px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        flex-shrink: 0; 
+        color: #18181b; 
+      }
+      
+      .sm-faq-a-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+      .sm-faq-item.open .sm-faq-a-wrapper { grid-template-rows: 1fr; }
+      .sm-faq-a { overflow: hidden; }
+      .sm-faq-a-inner { 
+        padding: 0 20px 20px 54px; 
+        font-size: 13px; 
+        color: #27272a; 
+        line-height: 1.6; 
+        font-weight: 400; 
+      }
 
       /* Track Panel UI Upgrades */
       .sm-track-container { padding: 16px; background: #f9fafb; }
@@ -136,8 +171,8 @@
         </div>
         <div id="sm-tabs">
           <div class="sm-tab active" data-tab="chat">Chat</div>
-          ${ config.capFaqs ? `<div class="sm-tab" data-tab="faq">FAQs</div>` : ''}
-          ${ config.capOrderTracking ? `<div class="sm-tab" data-tab="track">Track</div>` : ''}
+          ${config.capFaqs ? `<div class="sm-tab" data-tab="faq">FAQs</div>` : ''}
+          ${config.capOrderTracking ? `<div class="sm-tab" data-tab="track">Track</div>` : ''}
         </div>
         <div id="sm-panel-chat" class="sm-panel active">
           <div id="sm-chat-history"></div>
@@ -187,45 +222,45 @@
     renderFaqs();
   }
 
-function renderStarterPrompts() {
+  function renderStarterPrompts() {
     let prompts = [];
     try {
       prompts = typeof config.starterPrompts === 'string' ? JSON.parse(config.starterPrompts) : config.starterPrompts;
-    } catch(e) {}
-  
+    } catch (e) { }
+
     if (!prompts || !Array.isArray(prompts) || prompts.length === 0) return;
-  
+
     const history = document.getElementById('sm-chat-history');
     const container = document.createElement('div');
     container.className = 'sm-starter-prompts';
-    container.id = 'sm-starter-container'; 
-  
+    container.id = 'sm-starter-container';
+
     prompts.forEach(promptText => {
       if (!promptText.trim()) return;
-      
+
       const btn = document.createElement('button');
       btn.className = 'sm-starter-btn';
       btn.textContent = promptText;
-      
+
       btn.addEventListener('click', (e) => {
         const input = document.getElementById('sm-message-input');
         input.value = promptText;
-        
+
         // Remove ONLY the clicked button
         e.target.remove();
-        
+
         // Remove the container if no buttons are left
         if (container.childNodes.length === 0) {
           container.remove();
         }
-  
+
         // Trigger the send action
-        handleSend(); 
+        handleSend();
       });
-      
+
       container.appendChild(btn);
     });
-  
+
     if (container.childNodes.length > 0) {
       history.appendChild(container);
       document.getElementById('sm-panel-chat').scrollTop = 99999;
@@ -274,16 +309,16 @@ function renderStarterPrompts() {
       const orderNumber = document.getElementById('sm-track-order').value.trim();
       const email = document.getElementById('sm-track-email').value.trim();
       const resultEl = document.getElementById('sm-track-result');
-      
-      if (!orderNumber || !email) { 
-        resultEl.textContent = "Please fill in both fields."; 
+
+      if (!orderNumber || !email) {
+        resultEl.textContent = "Please fill in both fields.";
         resultEl.classList.add('show');
-        return; 
+        return;
       }
 
       resultEl.textContent = "Looking up your order...";
       resultEl.classList.add('show'); // Make the result box visible while loading
-      
+
       try {
         const response = await fetch(`${appUrl}/api/chat`, {
           method: 'POST',
@@ -306,38 +341,38 @@ function renderStarterPrompts() {
     }, delay);
   }
 
-function appendMessage(role, text, isIndicator = false) {
+  function appendMessage(role, text, isIndicator = false) {
     const history = document.getElementById('sm-chat-history');
-    
+
     // 1. Create and add the new message bubble
     const msg = document.createElement('div');
     msg.className = `sm-msg ${role}${isIndicator ? ' sm-indicator' : ''}`;
-    
+
     // 2. Safely escape text, then find URLs and make them clickable in a new tab
     const safeText = esc(text);
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    
+
     // Replace the plain text URL with a styled HTML link
     msg.innerHTML = safeText.replace(
-      urlRegex, 
+      urlRegex,
       '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; font-weight: 600;">$1</a>'
     );
-    
+
     history.appendChild(msg);
 
     // 3. Keep starter prompts at the bottom if they exist
     const starterContainer = document.getElementById('sm-starter-container');
     if (starterContainer) {
-      history.appendChild(starterContainer); 
+      history.appendChild(starterContainer);
     }
 
     // 4. Auto-scroll to the newest message
     document.getElementById('sm-panel-chat').scrollTop = 99999;
-    
+
     return msg;
   }
 
-  
+
   async function handleSend() {
     const input = document.getElementById('sm-message-input');
     const message = input.value.trim();
@@ -374,7 +409,6 @@ function appendMessage(role, text, isIndicator = false) {
       appendMessage('bot', "I'm temporarily unavailable, please try again in a moment.");
     }
   }
-
   function renderFaqs() {
     const faqContainer = document.getElementById('sm-faq-content');
     if (!config.capFaqs || !config.faqs || config.faqs.length === 0) {
@@ -383,28 +417,39 @@ function appendMessage(role, text, isIndicator = false) {
     }
 
     faqContainer.innerHTML = ''; // Clear preview data securely
-    
+
     config.faqs.forEach(faq => {
       const item = document.createElement('div');
       item.className = 'sm-faq-item';
-      
+
       const q = document.createElement('div');
       q.className = 'sm-faq-q';
-      q.textContent = faq.question;
-      
+      // Insert the + icon and question text
+      q.innerHTML = `<span class="sm-faq-icon">+</span><span>${esc(faq.question)}</span>`;
+
+      // Wrap answer for smooth grid transition
+      const aWrapper = document.createElement('div');
+      aWrapper.className = 'sm-faq-a-wrapper';
       const a = document.createElement('div');
       a.className = 'sm-faq-a';
-      a.textContent = faq.answer;
-
+      a.innerHTML = `<div class="sm-faq-a-inner">${esc(faq.answer)}</div>`;
+      aWrapper.appendChild(a);
       q.addEventListener('click', () => {
         const isOpen = item.classList.contains('open');
-        // Optional: Close other opened items for accurate accordion behavior
-        document.querySelectorAll('.sm-faq-item').forEach(i => i.classList.remove('open'));
-        if (!isOpen) item.classList.add('open');
-      });
 
+        document.querySelectorAll('.sm-faq-item').forEach(i => {
+          i.classList.remove('open');
+          const icon = i.querySelector('.sm-faq-icon');
+          if (icon) icon.textContent = '+';
+        });
+
+        if (!isOpen) {
+          item.classList.add('open');
+          q.querySelector('.sm-faq-icon').textContent = '—';
+        }
+      });
       item.appendChild(q);
-      item.appendChild(a);
+      item.appendChild(aWrapper);
       faqContainer.appendChild(item);
     });
   }
