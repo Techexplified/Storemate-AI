@@ -3,7 +3,7 @@ import { useLoaderData, useFetcher, data, useNavigate, redirect } from "react-ro
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { AppProvider, Text, Banner } from "@shopify/polaris";
-import "@shopify/polaris/build/esm/styles.css";
+// import "@shopify/polaris/build/esm/styles.css";
 import enTranslations from "@shopify/polaris/locales/en.json";
 import { chat } from "../lib/openai.server";
 

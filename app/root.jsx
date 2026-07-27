@@ -1,5 +1,13 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
+// 1. Add this import at the top
+import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
+
+// 2. Add this export right before your App function
+export const links = () => [
+  { rel: "stylesheet", href: polarisStyles },
+];
+
 export default function App() {
   return (
     <html lang="en">

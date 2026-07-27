@@ -5,7 +5,7 @@ import db from "../db.server";
 import { useState, useEffect } from "react";
 import { AppProvider, Text, Banner } from "@shopify/polaris";
 import enTranslations from "@shopify/polaris/locales/en.json";
-import "@shopify/polaris/build/esm/styles.css";
+// import "@shopify/polaris/build/esm/styles.css";
 import { syncProducts } from "../lib/store-data.server";
 
 const TrashIcon = () => (
