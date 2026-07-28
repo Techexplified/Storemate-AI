@@ -244,19 +244,34 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const fetcher = useFetcher();
     
-    // --- Async Embed Checking ---
+// --- Async Embed Checking ---
     const embedFetcher = useFetcher();
+
+    // 1. Initial check on mount
     useEffect(() => {
         embedFetcher.load("/app/api/check-embed");
     }, []);
 
-    const isEmbedded = embedFetcher.data ? embedFetcher.data.isEmbedded : true; // Default true to prevent flicker
+    // 2. Re-check when tab visibility changes (User switches back to this tab)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible" && embedFetcher.state === "idle") {
+                embedFetcher.load("/app/api/check-embed");
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }, [embedFetcher.state]);
+
+    // Derived state & Sync banner
+    const isEmbedded = embedFetcher.data ? embedFetcher.data.isEmbedded : true;
     const themeCustomizerUrl = embedFetcher.data?.themeCustomizerUrl || "#";
-    
+
     const [showBanner, setShowBanner] = useState(false);
     useEffect(() => {
-        if (embedFetcher.data && !embedFetcher.data.isEmbedded) {
-            setShowBanner(true);
+        if (embedFetcher.data) {
+            setShowBanner(!embedFetcher.data.isEmbedded);
         }
     }, [embedFetcher.data]);
 
