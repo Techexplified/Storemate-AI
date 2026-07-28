@@ -86,21 +86,21 @@ export const action = async ({ request }) => {
       return data({ reply }, { headers: HEADERS });
     }
 
-    if (config.capOrderTracking) {
-      const { orderNumber, email } = extractOrderInfo(messages);
+    // if (config.capOrderTracking) {
+    //   const { orderNumber, email } = extractOrderInfo(messages);
 
-      if (orderNumber && email) {
-        const order = await lookupOrder(shop, orderNumber, email);
-        const reply = formatOrderReply(order, config.botName);
-        if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
-        return data({ reply }, { headers: HEADERS });
-      }
-      if (orderNumber || email) {
-        const reply = `To look up your order, I need both your order number and the email used at checkout. ${orderNumber ? "You gave the order number — what's the email?" : "You gave the email — what's the order number?"}`;
-        if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
-        return data({ reply }, { headers: HEADERS });
-      }
-    }
+    //   if (orderNumber && email) {
+    //     const order = await lookupOrder(shop, orderNumber, email);
+    //     const reply = formatOrderReply(order, config.botName);
+    //     if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
+    //     return data({ reply }, { headers: HEADERS });
+    //   }
+    //   if (orderNumber || email) {
+    //     const reply = `To look up your order, I need both your order number and the email used at checkout. ${orderNumber ? "You gave the order number — what's the email?" : "You gave the email — what's the order number?"}`;
+    //     if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, messages.at(-1).content, reply);
+    //     return data({ reply }, { headers: HEADERS });
+    //   }
+    // }
 
     const systemPrompt = await buildSystemPrompt(shop, null, config);
     const reply = await chat(messages, systemPrompt);
