@@ -1,11 +1,10 @@
 // app/routes/app.dashboard.jsx
-import { data, redirect, useLoaderData, useSearchParams, useRevalidator, useNavigate, useSubmit, useFetcher } from "react-router";
+import { data, useLoaderData, useSearchParams, useRevalidator, useNavigate, useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState, useEffect } from "react";
-import { AppProvider, Text, Banner } from "@shopify/polaris";
+import { AppProvider } from "@shopify/polaris";
 import enTranslations from "@shopify/polaris/locales/en.json";
-// import "@shopify/polaris/build/esm/styles.css";
 import { syncProducts } from "../lib/store-data.server";
 
 const TrashIcon = () => (
@@ -39,8 +38,7 @@ export const loader = async ({ request }) => {
         userMessages,
         assistantMessages,
         conversations,
-        groupedSessions,
-        themeResponse
+        groupedSessions
     ] = await Promise.all([
         db.chatbotConfig.findUnique({ where: { shop } }),
         db.merchantConfig.findUnique({ where: { shop } }),
@@ -49,7 +47,7 @@ export const loader = async ({ request }) => {
         db.conversation.findMany({
             where: { shop, role: "user", createdAt: { gte: since } },
             select: { message: true },
-            take: 500,
+            take: 100, // Capped at 100 for faster query execution
         }),
         db.conversation.findMany({
             where: { shop, role: "assistant", createdAt: { gte: since } },
@@ -66,13 +64,6 @@ export const loader = async ({ request }) => {
             by: ["sessionId"],
             where: { shop, role: "user", createdAt: { gte: since } },
         }),
-        admin.graphql(`
-            query{
-            themes(first: 10){
-                nodes{ id role}
-            }
-            }
-            `).catch(() => null)
     ]);
 
     if (!merchantConfig) {
@@ -84,13 +75,15 @@ export const loader = async ({ request }) => {
     const totalConversations = groupedSessions.length;
     const hasNextPage = skip + limit < totalConversations;
 
-    const escalatedSessions = new Set(
-        assistantMessages
-            .filter(m =>
-                (merchantConfig?.supportEmail && m.message.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
-                (merchantConfig?.supportUrl && m.message.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()))
-            )
-            .map(m => m.sessionId)
+    const escalatedSessions = Array.from(
+        new Set(
+            assistantMessages
+                .filter(m =>
+                    (merchantConfig?.supportEmail && m.message.toLowerCase().includes(merchantConfig.supportEmail.toLowerCase())) ||
+                    (merchantConfig?.supportUrl && m.message.toLowerCase().includes(merchantConfig.supportUrl.toLowerCase()))
+                )
+                .map(m => m.sessionId)
+        )
     );
 
     const freq = {};
@@ -101,48 +94,7 @@ export const loader = async ({ request }) => {
     const topQuestions = Object.entries(freq)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
-        .map(([message, count]) => ({ message, count }));;
-
-    const themeCustomizerUrl = `https://admin.shopify.com/store/${shop.split('.')[0]}/themes/current/editor?context=apps`;
-    let isEmbedded = false;
-    if (themeResponse) {
-        try {
-            const themeData = await themeResponse.json();
-            const mainTheme = themeData?.data?.themes?.nodes?.find(t => t.role === "MAIN");
-
-            if (mainTheme) {
-                const assetResponse = await admin.graphql(`
-                    query getThemeFile($id: ID!) {
-                        theme(id: $id) {
-                            files(filenames: ["config/settings_data.json"], first: 1) {
-                                nodes {
-                                    body {
-                                        ... on OnlineStoreThemeFileBodyText { content }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                `, { variables: { id: mainTheme.id } });
-
-                const assetData = await assetResponse.json();
-                const rawContent = assetData?.data?.theme?.files?.nodes?.[0]?.body?.content ?? "";
-
-                if (rawContent) {
-                    const cleaned = rawContent.replace(/\/\*[\s\S]*?\*\//, "");
-                    const parsedSettings = JSON.parse(cleaned);
-                    const blocks = parsedSettings?.current?.blocks || {};
-
-                    isEmbedded = Object.values(blocks).some(
-                        (block) => block?.type?.includes("storemate") && block?.disabled !== true
-                    );
-                }
-            }
-        } catch (e) {
-            console.error("Embed verification failed:", e);
-            isEmbedded = false;
-        }
-    }
+        .map(([message, count]) => ({ message, count }));
 
     const supportLinksAdded = !!(merchantConfig?.supportEmail || merchantConfig?.supportUrl);
 
@@ -155,10 +107,8 @@ export const loader = async ({ request }) => {
         merchantConfig,
         faqs,
         policies,
-        isEmbedded,
         supportLinksAdded,
         totalConversations,
-        themeCustomizerUrl,
         page,
         hasNextPage,
     });
@@ -250,6 +200,7 @@ export const action = async ({ request }) => {
 
     if (intent === "delete-all") {
         await db.conversation.deleteMany({ where: { shop: shop } })
+        return data({ ok: true });
     }
 
     return data({ ok: false });
@@ -287,21 +238,39 @@ function Deletemodal({ intent, sessionId, onClose }) {
 }
 
 export default function Dashboard() {
-    const { conversations, escalatedSessions, topQuestions, range, config, merchantConfig, faqs, policies, isEmbedded, supportLinksAdded, totalConversations, themeCustomizerUrl, page, hasNextPage } = useLoaderData();
+    const { conversations, escalatedSessions, topQuestions, range, config, merchantConfig, faqs, policies, supportLinksAdded, totalConversations, page, hasNextPage } = useLoaderData();
     const [searchParams, setSearchParams] = useSearchParams();
     const { revalidate } = useRevalidator();
     const navigate = useNavigate();
+    const fetcher = useFetcher();
+    
+    // --- Async Embed Checking ---
+    const embedFetcher = useFetcher();
+    useEffect(() => {
+        embedFetcher.load("/app/api/check-embed");
+    }, []);
+
+    const isEmbedded = embedFetcher.data ? embedFetcher.data.isEmbedded : true; // Default true to prevent flicker
+    const themeCustomizerUrl = embedFetcher.data?.themeCustomizerUrl || "#";
+    
     const [showBanner, setShowBanner] = useState(false);
+    useEffect(() => {
+        if (embedFetcher.data && !embedFetcher.data.isEmbedded) {
+            setShowBanner(true);
+        }
+    }, [embedFetcher.data]);
+
+    // --- State Management ---
     const [selectedSession, setSelectedSession] = useState(null);
-    const [activePanel, setActivePanel] = useState(null); // 'support' | 'faqs' | 'policies'
+    const [activePanel, setActivePanel] = useState(null); 
     const [supportEmail, setSupportEmail] = useState(merchantConfig?.supportEmail || "");
     const [supportUrl, setSupportUrl] = useState(merchantConfig?.supportUrl || "");
     const [faqQ, setFaqQ] = useState("");
     const [faqA, setFaqA] = useState("");
     const [policyName, setPolicyName] = useState("");
     const [policyText, setPolicyText] = useState("");
-    const fetcher = useFetcher();
     const [deleteModalConfig, setDeleteModalConfig] = useState({ isOpen: false, intent: "", sessionId: null });
+    
     const drawerFetcher = useFetcher();
     const pollFetcher = useFetcher();
     const [currentPage, setCurrentPage] = useState(page);
@@ -313,7 +282,6 @@ export default function Dashboard() {
     const [isPaginating, setIsPaginating] = useState(false);
 
     useEffect(() => {
-        // When the global loader updates from a hard refresh, sync the state variables
         setLiveConversations(conversations);
         setLiveTotal(totalConversations);
         setLiveHasNextPage(hasNextPage);
@@ -326,8 +294,7 @@ export default function Dashboard() {
             setLiveEscalated(new Set(pollFetcher.data.escalatedSessions || Array.from(liveEscalated)));
             setLiveTotal(pollFetcher.data.totalConversations ?? liveTotal);
             setLiveHasNextPage(pollFetcher.data.hasNextPage ?? liveHasNextPage);
-
-             setIsPaginating(false);
+            setIsPaginating(false);
         }
     }, [pollFetcher.data]);
 
@@ -339,15 +306,11 @@ export default function Dashboard() {
         }, 5000);
         return () => clearInterval(id);
     }, [range, currentPage, pollFetcher.state]);
+
     const openDrawer = (sessionId) => {
         setSelectedSession(sessionId);
         drawerFetcher.load(`/app/dashboard/messages?sessionId=${sessionId}`);
     };
-
-    // Show banner if not embedded — dismiss resets on every app open (no localStorage)
-    useEffect(() => {
-        if (!isEmbedded) setShowBanner(true);
-    }, [isEmbedded]);
 
     const handleExport = () => {
         const rows = [
@@ -369,7 +332,6 @@ export default function Dashboard() {
         URL.revokeObjectURL(url);
     };
 
-    // Readiness checks
     const readiness = [
         {
             key: "support",
@@ -385,7 +347,7 @@ export default function Dashboard() {
             done: isEmbedded,
             mandatory: false,
             disabled: false,
-            onSetup: () => window.open(themeCustomizerUrl, "_blank", "noopener,noreferrer"), // ← Clicking "Setup →" will now also launch the editor
+            onSetup: () => window.open(themeCustomizerUrl, "_blank", "noopener,noreferrer"),
         },
         {
             key: "faqs",
@@ -406,12 +368,11 @@ export default function Dashboard() {
     ];
     const doneCount = readiness.filter(r => !r.disabled && r.done).length;
     const totalCount = readiness.filter(r => !r.disabled).length;
-    const progressPct = Math.round((doneCount / totalCount) * 100);
+    const progressPct = totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
 
     return (
         <AppProvider i18n={enTranslations}>
             <div className="dashboard-root">
-
                 {/* HEADER */}
                 <div className="dash-header">
                     <div>
@@ -452,7 +413,6 @@ export default function Dashboard() {
                             <button className="embed-btn-primary"
                                 onClick={() => window.open(themeCustomizerUrl, "_blank", "noopener,noreferrer")}
                             >⬡ Go to Theme Editor ↗</button>
-                            {/* <button className="embed-btn-secondary">View Setup Guide</button> */}
                             <button className="embed-banner-close" onClick={() => setShowBanner(false)}>✕</button>
                         </div>
                     </div>
@@ -488,11 +448,9 @@ export default function Dashboard() {
                                     <th>Delete</th>
                                 </tr>
                             </thead>
-                            {/* Replace pollFetcher.state === "loading" with isPaginating */}
-<tbody className={`conv-table-body ${isPaginating ? "is-loading" : ""}`}>
+                            <tbody className={`conv-table-body ${isPaginating ? "is-loading" : ""}`}>
                                 {liveConversations.slice(0, 10).map(c => {
                                     const isEscalated = liveEscalated.has(c.sessionId);
-
                                     return (
                                         <tr key={c.id}>
                                             <td>
@@ -578,7 +536,7 @@ export default function Dashboard() {
 
                 {/* BOTTOM ROW */}
                 <div className="dash-bottom-row">
-                    {/* Most Asked — unchanged */}
+                    {/* MOST ASKED */}
                     <div className="dash-card">
                         <div className="dash-card-header">
                             <div className="dash-card-title">Most Asked Questions</div>
@@ -634,24 +592,17 @@ export default function Dashboard() {
                     </div>
 
                     {/* QUICK ACTIONS */}
-<div className="dash-card">
+                    <div className="dash-card">
                         <div className="dash-card-title" style={{ marginBottom: 12 }}>Quick Actions</div>
                         <div className="quick-actions">
                             <button className="qa-btn" onClick={() => navigate("/app/settings")}>✎ Customize Chatbot</button>
                             <button className="qa-btn" onClick={() => navigate("/app/train")}>🧠 Train your AI</button>
-                            {/* <button className="qa-btn" onClick={() => {
-                                fetcher.submit({}, { method: "POST", action: "/api/sync" });
-                                revalidate();
-                            }}>
-                                {fetcher.state === "submitting" ? "Syncing..." : "↻ Sync Products"}
-                            </button> */}
                         </div>
                     </div>
                 </div>
 
                 {/* SETUP PANELS */}
                 <div className={`setup-panel-wrap ${activePanel ? "panel-open" : ""}`}>
-
                     {/* SUPPORT LINKS */}
                     {activePanel === "support" && (
                         <div className="setup-panel">
@@ -740,7 +691,6 @@ export default function Dashboard() {
                                 <button className="setup-cancel-btn" onClick={() => setActivePanel(null)}>Close</button>
                             </div>
 
-                            {/* Existing FAQs */}
                             {faqs.length > 0 && (
                                 <div className="existing-list">
                                     <div className="existing-list-title">Added FAQs</div>
@@ -822,6 +772,7 @@ export default function Dashboard() {
                         </div>
                     )}
                 </div>
+                
                 {/* CONVERSATION DRAWER */}
                 {selectedSession && (
                     <div className="conv-drawer-overlay" onClick={() => setSelectedSession(null)}>
@@ -852,6 +803,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
+                
                 {deleteModalConfig.isOpen && (
                     <Deletemodal
                         intent={deleteModalConfig.intent}
@@ -970,10 +922,15 @@ export default function Dashboard() {
         /* CARDS */
         .dash-card {
           background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 10px;
-          padding: 20px;
-          margin-bottom: 16px;
+          border: 1px solid #f3f4f6;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 24px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+          transition: box-shadow 0.2s ease;
+        }
+        .dash-card:hover {
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
         }
         .dash-card-header {
           display: flex;
@@ -1000,14 +957,22 @@ export default function Dashboard() {
         }
         .conv-table th {
           text-align: left;
-          font-weight: 500;
-          color: #6b7280;
-          font-size: 12px;
-          padding: 0 12px 10px 0;
-          border-bottom: 1px solid #f3f4f6;
+          font-weight: 600;
+          color: #8c929d;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          padding: 0 12px 14px 0;
+          border-bottom: 2px solid #f3f4f6;
+        }
+        .conv-table tbody tr {
+          transition: background-color 0.15s ease;
+        }
+        .conv-table tbody tr:hover td {
+          background-color: #fafafa;
         }
         .conv-table td {
-          padding: 12px 12px 12px 0;
+          padding: 16px 12px 16px 0;
           border-bottom: 1px solid #f9fafb;
           vertical-align: middle;
         }
@@ -1030,16 +995,22 @@ export default function Dashboard() {
         .conv-query { color: #374151; max-width: 320px; }
         .conv-time { color: #9ca3af; white-space: nowrap; }
         .conv-view-btn {
-          background: none;
+          background: #fff;
           border: 1px solid #e5e7eb;
-          border-radius: 5px;
-          padding: 4px 10px;
+          border-radius: 6px;
+          padding: 6px 12px;
           font-size: 12px;
+          font-weight: 500;
           cursor: pointer;
           color: #374151;
           white-space: nowrap;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+          transition: all 0.15s ease;
         }
-        .conv-view-btn:hover { background: #f9fafb; }
+        .conv-view-btn:hover { 
+          background: #f9fafb;
+          border-color: #d1d5db;
+        }
         .dash-table-footer {
           font-size: 12px;
           color: #9ca3af;
@@ -1128,6 +1099,26 @@ export default function Dashboard() {
         .status-done { background: #e8f5e9; color: #00A460; }
         .status-setup { background: #fef3c7; color: #92400e; }
         .status-disabled { background: #f3f4f6; color: #9ca3af; }
+        .readiness-status-btn {
+          font-size: 11px;
+          border-radius: 4px;
+          padding: 2px 8px;
+          font-weight: 500;
+          background: #fef3c7;
+          color: #92400e;
+          border: none;
+          cursor: pointer;
+        }
+        .readiness-status-btn:hover { background: #fde68a; }
+        .readiness-status-btn.status-done {
+          background: #00A460;
+          color: #fff;
+          border: none;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .readiness-status-btn.status-done:hover {
+          background: #008f54;
+        }
 
         /* QUICK ACTIONS */
         .quick-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
@@ -1145,359 +1136,282 @@ export default function Dashboard() {
         .qa-btn:hover { background: #f9fafb; }
 
         /* SETUP PANEL */
-.setup-panel-wrap {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.35s ease;
-}
-.setup-panel-wrap.panel-open {
-  max-height: 800px;
-}
-.setup-panel {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 20px;
-  margin-top: 16px;
-}
-.setup-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
-}
-.setup-panel-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
-.setup-panel-desc { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-.setup-panel-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  color: #9ca3af;
-}
-.setup-fields { display: flex; gap: 12px; margin-bottom: 16px; }
-.setup-field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.setup-label { font-size: 12px; font-weight: 500; color: #374151; }
-.setup-hint { font-weight: 400; color: #9ca3af; }
-.setup-input {
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  width: 100%;
-  box-sizing: border-box;
-}
-.setup-input:focus { outline: none; border-color: #00A460; }
-.setup-textarea {
-  height: 80px;
-  padding: 8px 10px;
-  resize: vertical;
-}
-.setup-actions { display: flex; gap: 8px; margin-bottom: 20px; }
-.setup-save-btn {
-  background: #00A460;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 18px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.setup-save-btn:hover { background: #008f54; }
-.setup-cancel-btn {
-  background: #fff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 8px 18px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.setup-cancel-btn:hover { background: #f9fafb; }
+        .setup-panel-wrap {
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.35s ease;
+        }
+        .setup-panel-wrap.panel-open {
+          max-height: 800px;
+        }
+        .setup-panel {
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          padding: 20px;
+          margin-top: 16px;
+        }
+        .setup-panel-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 20px;
+        }
+        .setup-panel-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+        .setup-panel-desc { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+        .setup-panel-close {
+          background: none;
+          border: none;
+          font-size: 16px;
+          cursor: pointer;
+          color: #9ca3af;
+        }
+        .setup-fields { display: flex; gap: 12px; margin-bottom: 16px; }
+        .setup-field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .setup-label { font-size: 12px; font-weight: 500; color: #374151; }
+        .setup-hint { font-weight: 400; color: #9ca3af; }
+        .setup-input {
+          height: 36px;
+          padding: 0 10px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 13px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .setup-input:focus { outline: none; border-color: #00A460; }
+        .setup-textarea {
+          height: 80px;
+          padding: 8px 10px;
+          resize: vertical;
+        }
+        .setup-actions { display: flex; gap: 8px; margin-bottom: 20px; }
+        .setup-save-btn {
+          background: #00A460;
+          color: #fff;
+          border: none;
+          border-radius: 6px;
+          padding: 8px 18px;
+          font-size: 13px;
+          cursor: pointer;
+        }
+        .setup-save-btn:hover { background: #008f54; }
+        .setup-cancel-btn {
+          background: #fff;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          padding: 8px 18px;
+          font-size: 13px;
+          cursor: pointer;
+        }
+        .setup-cancel-btn:hover { background: #f9fafb; }
 
-/* EXISTING ITEMS */
-.existing-list { border-top: 1px solid #f3f4f6; padding-top: 16px; }
-.existing-list-title { font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 10px; }
-.existing-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  background: #f9fafb;
-  border: 1px solid #f3f4f6;
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-.existing-item-content { flex: 1; }
-.existing-item-q { font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 2px; }
-.existing-item-a { font-size: 12px; color: #6b7280; }
-.existing-delete-btn {
-  background: none;
-  border: none;
-  color: #d1d5db;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 2px 4px;
-  flex-shrink: 0;
-}
-.existing-delete-btn:hover { color: #ef4444; }
+        /* EXISTING ITEMS */
+        .existing-list { border-top: 1px solid #f3f4f6; padding-top: 16px; }
+        .existing-list-title { font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 10px; }
+        .existing-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px 12px;
+          background: #f9fafb;
+          border: 1px solid #f3f4f6;
+          border-radius: 6px;
+          margin-bottom: 8px;
+        }
+        .existing-item-content { flex: 1; }
+        .existing-item-q { font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 2px; }
+        .existing-item-a { font-size: 12px; color: #6b7280; }
+        .existing-delete-btn {
+          background: none;
+          border: none;
+          color: #d1d5db;
+          cursor: pointer;
+          font-size: 14px;
+          padding: 2px 4px;
+          flex-shrink: 0;
+        }
+        .existing-delete-btn:hover { color: #ef4444; }
 
-.readiness-status-btn {
-  font-size: 11px;
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-weight: 500;
-  background: #fef3c7;
-  color: #92400e;
-  border: none;
-  cursor: pointer;
-}
-.readiness-status-btn:hover { background: #fde68a; }
+        .status-pill {
+          font-size: 11px;
+          font-weight: 500;
+          padding: 3px 8px;
+          border-radius: 4px;
+          display: inline-block;
+        }
+        .status-pill.resolved {
+          background: #e8f5e9;
+          color: #00A460;
+        }
+        .status-pill.escalated {
+          background: #ffebe9;
+          color: #cc1f1f;
+        }
 
-.status-pill {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-.status-pill.resolved {
-  background: #e8f5e9;
-  color: #00A460;
-}
-.status-pill.escalated {
-  background: #ffebe9;
-  color: #cc1f1f;
-}
-/* Drawer Entry Animations */
-@keyframes smFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
+        /* Drawer Entry Animations */
+        @keyframes smFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
 
-@keyframes smSlideIn {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
-}
+        @keyframes smSlideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
 
-.conv-drawer-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.3);
-    z-index: 100;
-    display: flex;
-    justify-content: flex-end;
-    animation: smFadeIn 0.2s ease-out forwards;
-}
+        .conv-drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 100;
+            display: flex;
+            justify-content: flex-end;
+            animation: smFadeIn 0.2s ease-out forwards;
+        }
 
-.conv-drawer {
-    width: 420px;
-    height: 100%;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-    box-shadow: -4px 0 20px rgba(0,0,0,0.1);
-    animation: smSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.conv-drawer-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 20px;
-    border-bottom: 1px solid #e5e7eb;
-}
-.conv-drawer-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
-.conv-drawer-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
-.conv-drawer-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.conv-bubble-wrap { display: flex; flex-direction: column; }
-.bubble-user { align-items: flex-end; }
-.bubble-ai { align-items: flex-start; }
-.conv-bubble {
-    max-width: 80%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 13px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-}
-.bubble-user-msg { background: #00A460; color: #fff; border-bottom-right-radius: 3px; }
-.bubble-ai-msg { background: #f3f4f6; color: #1a1a1a; border-bottom-left-radius: 3px; }
-.bubble-time { font-size: 10px; color: #9ca3af; margin-top: 3px; padding: 0 4px; }
-/* Global Danger Utility Button */
-.dash-btn-danger {
-  height: 34px;
-  padding: 0 12px;
-  border: 1px solid #dc2626;
-  border-radius: 10px;
-  font-size: 13px;
-  color: #fff;
-  background: #dc2626;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-.dash-btn-danger:hover {
-  background: #b91c1c;
-  border-color: #b91c1c;
-}
+        .conv-drawer {
+            width: 420px;
+            height: 100%;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+            animation: smSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .conv-drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .conv-drawer-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+        .conv-drawer-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .conv-drawer-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .conv-bubble-wrap { display: flex; flex-direction: column; }
+        .bubble-user { align-items: flex-end; }
+        .bubble-ai { align-items: flex-start; }
+        .conv-bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .bubble-user-msg { background: #00A460; color: #fff; border-bottom-right-radius: 3px; }
+        .bubble-ai-msg { background: #f3f4f6; color: #1a1a1a; border-bottom-left-radius: 3px; }
+        .bubble-time { font-size: 10px; color: #9ca3af; margin-top: 3px; padding: 0 4px; }
 
-/* Inline Action Row Trash Button */
-.conv-delete-row-btn {
-  background: none;
-  border: 1px solid #fee2e2;
-  border-radius: 5px;
-  padding: 5px;
-  cursor: pointer;
-  color: #ef4444;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.conv-delete-row-btn:hover { background: #fee2e2; }
+        /* Global Danger Utility Button */
+        .dash-btn-danger {
+          height: 34px;
+          padding: 0 12px;
+          border: 1px solid #dc2626;
+          border-radius: 10px;
+          font-size: 13px;
+          color: #fff;
+          background: #dc2626;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          white-space: nowrap;
+        }
+        .dash-btn-danger:hover {
+          background: #b91c1c;
+          border-color: #b91c1c;
+        }
 
-/* Backdrop Popup Layer Styles */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.modal-card {
-    background: #fff;
-    border-radius: 8px;
-    padding: 24px;
-    width: 100%;
-    max-width: 400px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    box-sizing: border-box;
-}
-.modal-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0 0 8px 0;
-}
-.modal-desc {
-    font-size: 13px;
-    color: #6b7280;
-    line-height: 1.5;
-    margin: 0 0 20px 0;
-}
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-.modal-btn-cancel {
-    background: #fff;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    padding: 8px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    color: #374151;
-}
-.modal-btn-cancel:hover { background: #f9fafb; }
-.modal-btn-delete {
-    background: #dc2626;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 14px;
-    font-size: 13px;
-    cursor: pointer;
-}
-.modal-btn-delete:hover { background: #b91c1c; }
-/* Update Card Styling for Premium Look */
-.dash-card {
-  background: #fff;
-  border: 1px solid #f3f4f6; /* Softer border */
-  border-radius: 12px; /* Slightly rounder */
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02); /* Soft shadow */
-  transition: box-shadow 0.2s ease;
-}
-.dash-card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-}
+        /* Inline Action Row Trash Button */
+        .conv-delete-row-btn {
+          background: none;
+          border: 1px solid #fee2e2;
+          border-radius: 5px;
+          padding: 5px;
+          cursor: pointer;
+          color: #ef4444;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .conv-delete-row-btn:hover { background: #fee2e2; }
 
-/* Refine Table Headers */
-.conv-table th {
-  text-align: left;
-  font-weight: 600;
-  color: #8c929d;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0 12px 14px 0;
-  border-bottom: 2px solid #f3f4f6;
-}
+        /* Backdrop Popup Layer Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+        }
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin: 0 0 8px 0;
+        }
+        .modal-desc {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.5;
+            margin: 0 0 20px 0;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .modal-btn-cancel {
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #374151;
+        }
+        .modal-btn-cancel:hover { background: #f9fafb; }
+        .modal-btn-delete {
+            background: #dc2626;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .modal-btn-delete:hover { background: #b91c1c; }
 
-/* Improve Table Rows & Add Hover State */
-.conv-table tbody tr {
-  transition: background-color 0.15s ease;
-}
-.conv-table tbody tr:hover td {
-  background-color: #fafafa;
-}
-.conv-table td {
-  padding: 16px 12px 16px 0;
-  border-bottom: 1px solid #f9fafb;
-  vertical-align: middle;
-}
+        /* Table Pagination Animation */
+        .conv-table-body {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
 
-/* Refine Standard Buttons */
-.conv-view-btn {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  color: #374151;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-  transition: all 0.15s ease;
-}
-.conv-view-btn:hover { 
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
-
-/* Make Store Readiness "Manage" Button Green */
-.readiness-status-btn.status-done {
-  background: #00A460;
-  color: #fff;
-  border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-.readiness-status-btn.status-done:hover {
-  background: #008f54;
-}
-/* Table Pagination Animation */
-.conv-table-body {
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.conv-table-body.is-loading {
-    opacity: 0.3;
-    transform: translateY(4px);
-    pointer-events: none; /* Prevents double-clicking buttons while loading */
-}
+        .conv-table-body.is-loading {
+            opacity: 0.3;
+            transform: translateY(4px);
+            pointer-events: none;
+        }
       `}</style>
         </AppProvider>
     );
