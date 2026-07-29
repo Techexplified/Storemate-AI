@@ -594,7 +594,7 @@ export default function Dashboard() {
                                     {!r.disabled && (
                                         r.onSetup
                                             ? <button className={`readiness-status-btn ${r.done ? "status-done" : ""}`} onClick={r.onSetup}>
-                                                {activePanel === r.key ? "Close ✕" : r.done ? "Manage ✓" : "Setup →"}
+                                                {activePanel === r.key ? "Close ✕" : r.done ? "Manage " : "Setup →"}
                                             </button>
                                             : <span className={`readiness-status ${r.done ? "status-done" : "status-setup"}`}>
                                                 {r.done ? "Done" : "Setup"}
@@ -610,8 +610,8 @@ export default function Dashboard() {
                     <div className="dash-card">
                         <div className="dash-card-title" style={{ marginBottom: 12 }}>Quick Actions</div>
                         <div className="quick-actions">
-                            <button className="qa-btn" onClick={() => navigate("/app/settings")}>✎ Customize Chatbot</button>
-                            <button className="qa-btn" onClick={() => navigate("/app/train")}>🧠 Train your AI</button>
+                            <button className="qa-btn" onClick={() => navigate("/app/settings")}>Customize Chatbot</button>
+                            <button className="qa-btn" onClick={() => navigate("/app/train")}>Train your AI</button>
                         </div>
                     </div>
                 </div>
@@ -845,7 +845,7 @@ export default function Dashboard() {
         }
         .dash-title {
           font-size: 22px;
-          font-weight: 600;
+          font-weight: 700;
           margin: 0 0 2px;
           color: #1a1a1a;
         }

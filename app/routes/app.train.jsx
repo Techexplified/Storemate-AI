@@ -133,10 +133,10 @@ export default function TrainPage() {
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#0f172a' }}>
       
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', letterSpacing: '-0.5px', margin: '0 0 8px 0' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.5px', margin: '0 0 8px 0' }}>
           Train {config.botName}
         </h1>
-        <p style={{ fontSize: '15px', color: '#64748b', margin: 0 }}>
+        <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
           Manage your AI's knowledge base and test its responses in real-time.
         </p>
       </div>

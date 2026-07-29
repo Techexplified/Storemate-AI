@@ -174,7 +174,7 @@ export default function Settings() {
           {/* Header Section */}
           <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <h1 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 4px 0" }}>Chatbot Settings</h1>
+              <h1 style={{ fontSize: "20px", fontWeight: "700", margin: "0 0 4px 0" }}>Chatbot Settings</h1>
               <p style={{ fontSize: "13px", color: "#6d7175", margin: 0 }}>Manage your AI persona, appearance, and core capabilities.</p>
             </div>
 
