@@ -145,7 +145,7 @@ export default function TrainPage() {
         
         {/* LEFT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '6px', borderRadius: '12px', gap: '4px' }}>
+          <div style={{ display: 'inline-flex', borderBottom: '1px solid black', padding: '6px', gap: '4px' }}>
             <button 
               onClick={() => setTab("kb")}
               style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', fontSize: '14px', fontWeight: '600', cursor: 'pointer', background: currentTab === "kb" ? '#fff' : 'transparent', color: currentTab === "kb" ? '#0f172a' : '#64748b', boxShadow: currentTab === "kb" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
