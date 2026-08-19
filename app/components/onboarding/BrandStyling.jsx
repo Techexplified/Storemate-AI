@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Text } from "@shopify/polaris";
 import { X, Palette } from "lucide-react";
-import { Wheel } from "@uiw/react-color";
+import Wheel from "@uiw/react-color-wheel";
 
 // Restored all 12 original languages
 const LANGUAGES = [
