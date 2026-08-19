@@ -14,12 +14,11 @@ export default function App() {
   const { apiKey } = useLoaderData();
   const location = useLocation();
 
-  const isonboarding = (location.pathname === "/app" || location.pathname === "app/capabilities" && !location.search.includes("mode=edit"));
-  const shownav = !isonboarding;
+  const isonboarding = (location.pathname === "/app/appearance" || location.pathname === "/app/capabilities" || location.pathname === "/app/capabilities?mode=edit");
 
   return (
     <AppProvider embedded apiKey={apiKey}>
-      { shownav && (
+      { !isonboarding && (
       <s-app-nav>
         {/* <s-link href="/app">Home</s-link>
         <s-link href="/app/additional">Additional page</s-link> */}
