@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Text } from "@shopify/polaris";
 import { X, Palette } from "lucide-react";
-import Wheel from "@uiw/react-color-wheel";
 
 // Restored all 12 original languages
 const LANGUAGES = [
@@ -26,9 +25,21 @@ const BRAND_PRESETS = [
 
 export default function BrandStyling({ formData, updateField }) {
   const [showColorPopup, setShowColorPopup] = useState(false);
+  const [WheelComponent, setWheelComponent] = useState(null);
   const popupRef = useRef(null);
 
   const isPreset = BRAND_PRESETS.includes(formData.brandColor);
+
+  // Dynamically load the Wheel module only on client-side
+  useEffect(() => {
+    import("@uiw/react-color")
+      .then((mod) => {
+        setWheelComponent(() => mod.Wheel || mod.default);
+      })
+      .catch((err) => {
+        console.error("Failed to load color wheel:", err);
+      });
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -129,6 +140,7 @@ export default function BrandStyling({ formData, updateField }) {
           </div>
         </div>
 
+        {/* Circular Color Wheel Popup */}
         {showColorPopup && (
           <div style={{
             position: "absolute",
@@ -150,11 +162,15 @@ export default function BrandStyling({ formData, updateField }) {
               </button>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <Wheel
-                color={formData.brandColor}
-                onChange={(color) => updateField("brandColor", color.hex)}
-              />
+            <div style={{ display: "flex", justifyContent: "center", minWidth: "150px", minHeight: "150px" }}>
+              {WheelComponent ? (
+                <WheelComponent
+                  color={formData.brandColor}
+                  onChange={(color) => updateField("brandColor", color.hex)}
+                />
+              ) : (
+                <div style={{ fontSize: "12px", color: "#9ca3af", display: "flex", alignItems: "center" }}>Loading picker...</div>
+              )}
             </div>
           </div>
         )}
