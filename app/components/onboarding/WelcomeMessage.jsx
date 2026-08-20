@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { Text } from "@shopify/polaris";
 
 export default function WelcomeMessage({ formData, updateField, templateFetcher, starterPrompts, setStarterPrompts }) {
-  
   useEffect(() => {
     if (templateFetcher.data?.welcomeMessage) {
       updateField("welcomeMessage", templateFetcher.data.welcomeMessage);
@@ -34,7 +33,7 @@ export default function WelcomeMessage({ formData, updateField, templateFetcher,
       <div style={{ marginTop: "16px" }}>
         <Text variant="bodySm" tone="subdued">Message templates</Text>
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
-          {["Friendly greeting", "Professional", "Empathetic", "Minimal"].map((template) => (
+          {["Friendly greeting", "Shop assistant", "Order tracker", "Minimal"].map((template) => (
             <button
               key={template}
               disabled={templateFetcher.state !== "idle"}
@@ -62,8 +61,8 @@ export default function WelcomeMessage({ formData, updateField, templateFetcher,
             placeholder="e.g. Hi! I'm Aria, how can I help you?"
             rows={4}
             style={{ width: "100%", border: "1px solid #e1e3e5", borderRadius: "8px", padding: "10px 12px", fontSize: "14px", outline: "none", boxSizing: "border-box", resize: "none", fontFamily: "inherit" }}
-            onFocus={(e) => e.target.style.borderColor = "#00A460"}
-            onBlur={(e) => e.target.style.borderColor = "#e1e3e5"}
+            onFocus={(e) => (e.target.style.borderColor = "#00A460")}
+            onBlur={(e) => (e.target.style.borderColor = "#e1e3e5")}
           />
           <div style={{ position: "absolute", bottom: "8px", right: "10px", fontSize: "11px", color: "#9ca3af" }}>
             {formData.welcomeMessage.length} / 300

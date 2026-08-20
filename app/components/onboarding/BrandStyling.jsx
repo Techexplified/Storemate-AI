@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Text } from "@shopify/polaris";
-import { X, Palette } from "lucide-react";
+import { X, Palette, Languages, Loader2 } from "lucide-react";
+import { useFetcher } from "react-router";
 
-// Restored all 12 original languages
 const LANGUAGES = [
   { code: "en", label: "English" },
   { code: "es", label: "Spanish" },
@@ -23,14 +23,15 @@ const BRAND_PRESETS = [
   "#8b5cf6", "#ef4444", "#f43f5e", "#1f2937"
 ];
 
-export default function BrandStyling({ formData, updateField }) {
+export default function BrandStyling({ formData, updateField, starterPrompts, setStarterPrompts }) {
   const [showColorPopup, setShowColorPopup] = useState(false);
   const [WheelComponent, setWheelComponent] = useState(null);
+  const [lastSyncedLang, setLastSyncedLang] = useState(formData.language || "en");
+  const translateFetcher = useFetcher();
   const popupRef = useRef(null);
 
   const isPreset = BRAND_PRESETS.includes(formData.brandColor);
 
-  // Dynamically load the Wheel module only on client-side
   useEffect(() => {
     import("@uiw/react-color")
       .then((mod) => {
@@ -50,6 +51,33 @@ export default function BrandStyling({ formData, updateField }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Update master form state when AI translation resolves
+  useEffect(() => {
+    if (translateFetcher.data?.translatedCopy) {
+      const { welcomeMessage: transWelcome, starterPrompts: transPrompts } = translateFetcher.data.translatedCopy;
+      if (transWelcome) updateField("welcomeMessage", transWelcome);
+      if (Array.isArray(transPrompts)) setStarterPrompts(transPrompts);
+      setLastSyncedLang(formData.language);
+    }
+  }, [translateFetcher.data]);
+
+  const handleTranslate = () => {
+    translateFetcher.submit(
+      {
+        intent: "translateOnboardingCopy",
+        welcomeMessage: formData.welcomeMessage,
+        starterPrompts: JSON.stringify(starterPrompts),
+        targetLanguage: formData.language || "en",
+        personalityTone: formData.personalityTone || "friendly",
+      },
+      { method: "POST" }
+    );
+  };
+
+  const selectedLangObj = LANGUAGES.find((l) => l.code === formData.language) || LANGUAGES[0];
+  const isTranslating = translateFetcher.state !== "idle";
+  const hasLangChanged = formData.language !== lastSyncedLang;
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
@@ -140,7 +168,6 @@ export default function BrandStyling({ formData, updateField }) {
           </div>
         </div>
 
-        {/* Circular Color Wheel Popup */}
         {showColorPopup && (
           <div style={{
             position: "absolute",
@@ -177,11 +204,11 @@ export default function BrandStyling({ formData, updateField }) {
       </div>
 
       {/* Language Section */}
-      <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px" }}>
+      <div style={{ backgroundColor: "#fff", border: "1px solid #e1e3e5", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column" }}>
         <Text variant="headingSm" as="h2">5. Language</Text>
         <Text variant="bodySm" tone="subdued">Language your AI will respond in</Text>
 
-        <div style={{ marginTop: "14px", maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", paddingRight: "4px" }}>
+        <div style={{ marginTop: "14px", maxHeight: "170px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", paddingRight: "4px" }}>
           {LANGUAGES.map((lang) => (
             <div
               key={lang.code}
@@ -205,6 +232,53 @@ export default function BrandStyling({ formData, updateField }) {
             </div>
           ))}
         </div>
+
+        {/* Translation Banner upon Language Change */}
+        {hasLangChanged && (
+          <div style={{
+            marginTop: "12px",
+            padding: "10px 12px",
+            backgroundColor: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px"
+          }}>
+            <div style={{ fontSize: "12px", color: "#166534", lineHeight: "1.4" }}>
+              Language changed to <strong>{selectedLangObj.label}</strong>. Translate your welcome message & prompts?
+            </div>
+            <button
+              type="button"
+              disabled={isTranslating}
+              onClick={handleTranslate}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                backgroundColor: "#00A460",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: "600",
+                cursor: isTranslating ? "not-allowed" : "pointer",
+              }}
+            >
+              {isTranslating ? (
+                <>
+                  {/* <Loader2 size={13} className="animate-spin" />*/} Translating... 
+                </>
+              ) : (
+                <>
+                  <Languages size={13} /> ✦ Translate to {selectedLangObj.label}
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,58 +2,63 @@ import { useState } from "react";
 import { Text } from "@shopify/polaris";
 import { renderIcon, parseAvatarPreset } from "./AvatarAppearance";
 
-// Dynamic responses across all 12 supported languages
+// Dynamic user questions and AI responses across all 12 languages
 const SAMPLE_CONVERSATIONS = {
+  questions: {
+    en: "Where is my order?",
+    es: "¿Dónde está mi pedido?",
+    fr: "Où est ma commande ?",
+    de: "Wo ist meine Bestellung?",
+    pt: "Onde está o meu pedido?",
+    hi: "मेरा ऑर्डर कहाँ है?",
+    ar: "أين طلبي؟",
+    zh: "我的订单在哪里？",
+    ja: "注文はどこにありますか？",
+    ko: "제 주문은 어디에 있나요?",
+    it: "Dov'è il mio ordine?",
+    nl: "Waar is mijn bestelling?",
+  },
   friendly: {
-    user: "Where is my order?",
-    responses: {
-      en: "I'd love to help with that! Just drop your order number and I'll find its tracking status right away 😊",
-      es: "¡Me encantaría ayudarte con eso! Solo dime tu número de pedido y buscaré el estado de inmediato 😊",
-      fr: "Je serais ravi de vous aider ! Donnez-moi simplement votre numéro de commande et je vérifie ça tout de suite 😊",
-      de: "Da helfe ich super gerne weiter! Nenne mir einfach deine Bestellnummer und ich prüfe den Status sofort 😊",
-      pt: "Com certeza, vou adorar te ajudar! Me passa seu número de pedido que já verifico o status 😊",
-      hi: "मुझे आपकी मदद करने में बहुत खुशी होगी! कृपया अपना ऑर्डर नंबर बताएं, मैं तुरंत चेक करता हूँ 😊",
-      ar: "يسعدني جداً مساعدتك في ذلك! فقط زودني برقم طلبك وسأتحقق من حالة التتبع فوراً 😊",
-      zh: "我很乐意为您提供帮助！只需提供您的订单号，我就会立即为您查询物流状态 😊",
-      ja: "喜んでお手伝いします！注文番号を教えていただければ、すぐに配送状況をお調べします 😊",
-      ko: "기꺼이 도와드릴게요! 주문 번호를 알려주시면 바로 배송 조회를 도와드리겠습니다 😊",
-      it: "Sarei felice di aiutarti! Indicami il numero del tuo ordine e controllerò subito lo stato della spedizione 😊",
-      nl: "Daar help ik je heel graag bij! Geef even je bestelnummer door, dan zoek ik het meteen voor je uit 😊",
-    },
+    en: "I'd love to help with that! Just drop your order number and I'll find its tracking status right away 😊",
+    es: "¡Me encantaría ayudarte con eso! Solo dime tu número de pedido y buscaré el estado de inmediato 😊",
+    fr: "Je serais ravi de vous aider ! Donnez-moi simplement votre numéro de commande et je vérifie ça tout de suite 😊",
+    de: "Da helfe ich super gerne weiter! Nenne mir einfach deine Bestellnummer und ich prüfe den Status sofort 😊",
+    pt: "Com certeza, vou adorar te ajudar! Me passa seu número de pedido que já verifico o status 😊",
+    hi: "मुझे आपकी मदद करने में बहुत खुशी होगी! कृपया अपना ऑर्डर नंबर बताएं, मैं तुरंत चेक करता हूँ 😊",
+    ar: "يسعدني جداً مساعدتك في ذلك! فقط زودني برقم طلبك وسأتحقق من حالة التتبع فوراً 😊",
+    zh: "我很乐意为您提供帮助！只需提供您的订单号，我就会立即为您查询物流状态 😊",
+    ja: "喜んでお手伝いします！注文番号を教えていただければ、すぐに配送状況をお調べします 😊",
+    ko: "기꺼이 도와드릴게요! 주문 번호를 알려주시면 바로 배송 조회를 도와드리겠습니다 😊",
+    it: "Sarei felice di aiutarti! Indicami il numero del tuo ordine e controllerò subito lo stato della spedizione 😊",
+    nl: "Daar help ik je heel graag bij! Geef even je bestelnummer door, dan zoek ik het meteen voor je uit 😊",
   },
   professional: {
-    user: "Where is my order?",
-    responses: {
-      en: "Certainly. Please provide your order number, and I will retrieve the current shipment status for you.",
-      es: "Por supuesto. Por favor, proporcione su número de pedido y recuperaré el estado del envío para usted.",
-      fr: "Certainement. Veuillez fournir votre numéro de commande et je récupérerai les détails de livraison.",
-      de: "Gerne. Bitte geben Sie Ihre Bestellnummer an, damit ich den aktuellen Lieferstatus abrufen kann.",
-      pt: "Certamente. Por favor, informe o número do seu pedido para que eu possa verificar o status da entrega.",
-      hi: "ज़रूर। कृपया अपना ऑर्डर नंबर प्रदान करें, मैं आपके लिए वर्तमान शिपमेंट स्थिति प्राप्त करूँगा।",
-      ar: "بالتأكيد. يرجى تزويدنا برقم الطلب، وسأقوم بجلب تفاصيل وحالة الشحنة الحالية لك.",
-      zh: "好的。请提供您的订单编号，我将为您调取当前的物流发货状态。",
-      ja: "かしこまりました。注文番号をご入力いただければ、現在の配送状況を確認いたします。",
-      ko: "알겠습니다. 주문 번호를 입력해 주시면 현재 배송 상태를 조회해 드리겠습니다.",
-      it: "Certamente. La preghiamo di fornire il numero d'ordine per verificare lo stato della spedizione.",
-      nl: "Zeker. Voer alstublieft uw bestelnummer in, dan haal ik de actuele verzendstatus voor u op.",
-    },
+    en: "Certainly. Please provide your order number, and I will retrieve the current shipment status for you.",
+    es: "Por supuesto. Por favor, proporcione su número de pedido y recuperaré el estado del envío para usted.",
+    fr: "Certainement. Veuillez fournir votre numéro de commande et je récupérerai les détails de livraison.",
+    de: "Gerne. Bitte geben Sie Ihre Bestellnummer an, damit ich den aktuellen Lieferstatus abrufen kann.",
+    pt: "Certamente. Por favor, informe o número do seu pedido para que eu possa verificar o status da entrega.",
+    hi: "ज़रूर। कृपया अपना ऑर्डर नंबर प्रदान करें, मैं आपके लिए वर्तमान शिपमेंट स्थिति प्राप्त करूँगा।",
+    ar: "بالتأكيد. يرجى تزويدنا برقم الطلب، وسأقوم بجلب تفاصيل وحالة الشحنة الحالية لك.",
+    zh: "好的。请提供您的订单编号，我将为您调取当前的物流发货状态。",
+    ja: "かしこまりました。注文番号をご入力いただければ、現在の配送状況を確認いたします。",
+    ko: "알겠습니다. 주문 번호를 입력해 주시면 현재 배송 상태를 조회해 드리겠습니다.",
+    it: "Certamente. La preghiamo di fornire il numero d'ordine per verificare lo stato della spedizione.",
+    nl: "Zeker. Voer alstublieft uw bestelnummer in, dan haal ik de actuele verzendstatus voor u op.",
   },
   concise: {
-    user: "Where is my order?",
-    responses: {
-      en: "Please share your order number to track your package.",
-      es: "Indique su número de pedido para rastrear su paquete.",
-      fr: "Veuillez fournir votre numéro de commande pour le suivi.",
-      de: "Bitte Bestellnummer eingeben, um das Paket zu verfolgen.",
-      pt: "Informe seu número de pedido para rastreamento.",
-      hi: "पैकेज ट्रैक करने के लिए कृपया अपना ऑर्डर नंबर दर्ज करें।",
-      ar: "يرجى إدخال رقم الطلب لتتبع شحنتك.",
-      zh: "请提供订单号以追踪包裹。",
-      ja: "追跡のため注文番号を入力してください。",
-      ko: "배송 조회를 위해 주문 번호를 입력해주세요.",
-      it: "Inserisci il numero d'ordine per tracciare il pacco.",
-      nl: "Voer je bestelnummer in om het pakket te volgen.",
-    },
+    en: "Please share your order number to track your package.",
+    es: "Indique su número de pedido para rastrear su paquete.",
+    fr: "Veuillez fournir votre numéro de commande pour le suivi.",
+    de: "Bitte Bestellnummer eingeben, um das Paket zu verfolgen.",
+    pt: "Informe seu número de pedido para rastreamento.",
+    hi: "पैकेज ट्रैक करने के लिए कृपया अपना ऑर्डर नंबर दर्ज करें।",
+    ar: "يرجى إدخال رقم الطلب لتتبع شحنتك.",
+    zh: "请提供订单号以追踪包裹。",
+    ja: "追跡のため注文番号を入力してください。",
+    ko: "배송 조회를 위해 주문 번호를 입력해주세요.",
+    it: "Inserisci il numero d'ordine per tracciare il pacco.",
+    nl: "Voer je bestelnummer in om het pakket te volgen.",
   },
 };
 
@@ -64,9 +69,12 @@ export default function LivePreview({ formData, logoUrl, starterPrompts }) {
   const currentTone = formData.personalityTone || "friendly";
   const currentLang = formData.language || "en";
 
-  const conversation = SAMPLE_CONVERSATIONS[currentTone] || SAMPLE_CONVERSATIONS.friendly;
-  const aiReply =
-    conversation.responses[currentLang] || conversation.responses.en;
+  const userQuestion =
+    SAMPLE_CONVERSATIONS.questions[currentLang] || SAMPLE_CONVERSATIONS.questions.en;
+
+  const toneReplies =
+    SAMPLE_CONVERSATIONS[currentTone] || SAMPLE_CONVERSATIONS.friendly;
+  const aiReply = toneReplies[currentLang] || toneReplies.en;
 
   return (
     <div>
@@ -180,6 +188,7 @@ export default function LivePreview({ formData, logoUrl, starterPrompts }) {
               flexDirection: "column",
               gap: "10px"
             }}>
+              {/* 1. Welcome Bubble */}
               <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
                 <div style={{
                   width: "28px",
@@ -217,6 +226,7 @@ export default function LivePreview({ formData, logoUrl, starterPrompts }) {
                 </div>
               </div>
 
+              {/* 2. Starter Prompts */}
               {starterPrompts.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
                   {starterPrompts.filter((p) => p.trim()).map((prompt, i) => (
@@ -238,6 +248,7 @@ export default function LivePreview({ formData, logoUrl, starterPrompts }) {
                 </div>
               )}
 
+              {/* 3. Localized User Question Bubble */}
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <div style={{
                   backgroundColor: formData.brandColor,
@@ -249,10 +260,11 @@ export default function LivePreview({ formData, logoUrl, starterPrompts }) {
                   maxWidth: "80%",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
                 }}>
-                  {conversation.user}
+                  {userQuestion}
                 </div>
               </div>
 
+              {/* 4. Localized & Tone-Aware AI Response Bubble */}
               <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
                 <div style={{
                   width: "28px",

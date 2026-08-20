@@ -50,6 +50,36 @@ export const action = async ({ request }) => {
     return data({ names });
   }
 
+  if (intent === "translateOnboardingCopy") {
+    const welcomeMessage = formData.get("welcomeMessage");
+    const starterPrompts = formData.get("starterPrompts");
+    const targetLanguage = formData.get("targetLanguage");
+    const tone = formData.get("personalityTone") || "friendly";
+
+    const raw = await chat([{
+      role: "user",
+      content: `You are an expert e-commerce copywriter. Translate the following welcome message and starter prompt questions into the language with code "${targetLanguage}".
+Maintain the "${tone}" tone.
+
+Welcome Message: "${welcomeMessage}"
+Starter Prompts: ${starterPrompts}
+
+Return ONLY a valid JSON object matching this structure with no markdown or backticks:
+{
+  "welcomeMessage": "translated string",
+  "starterPrompts": ["translated prompt 1", "translated prompt 2"]
+}`
+    }]);
+
+    try {
+      const cleaned = raw.replace(/```json|```/g, "").trim();
+      const result = JSON.parse(cleaned);
+      return data({ translatedCopy: result });
+    } catch (err) {
+      return data({ error: "Failed to parse translated copy" }, { status: 500 });
+    }
+  }
+
   await db.chatbotConfig.upsert({
     where: { shop: session.shop },
     update: {
@@ -141,7 +171,12 @@ export default function AppAppearance() {
           <ChatbotIdentity formData={formData} updateField={updateField} namesFetcher={namesFetcher} />
           <AvatarAppearance formData={formData} updateField={updateField} logoUrl={logoUrl} setLogoUrl={setLogoUrl} />
           <WelcomeMessage formData={formData} updateField={updateField} templateFetcher={templateFetcher} starterPrompts={starterPrompts} setStarterPrompts={setStarterPrompts} />
-          <BrandStyling formData={formData} updateField={updateField} themeColor={themeColor} />
+          <BrandStyling 
+            formData={formData} 
+            updateField={updateField} 
+            starterPrompts={starterPrompts} 
+            setStarterPrompts={setStarterPrompts} 
+          />
         </div>
 
         <div style={{ position: "sticky", top: "24px", alignSelf: "start" }}>
