@@ -3,7 +3,7 @@ import {
   User, Smile, Meh, Frown, Laugh, ThumbsUp, Star, Heart, Flame,
   Gift, PartyPopper, Rocket, Zap, Bot, Brain, Sparkles, MessageCircle,
   Headphones, Gamepad2, Bell, Megaphone, Send, Ghost, Crown,
-  Moon, Sun, Flower2, Leaf, Flag
+  Moon, Sun, Flower2, Leaf, Flag, ChevronRight
 } from "lucide-react";
 
 const LUCIDE_ICONS = {
@@ -44,7 +44,7 @@ const PRESETS = [
   },
   {
     id: "indigo", bg: "#6366f1", icon: (
-      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20c2-6 4-6 6 0s4 6 6 0 4-6 6 0 4-6 6 0" stroke="white" strokeWidth="2.5" strokeLinecap="round" /></svg>
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20c2-6 4-6 6 0s4 6 6 0 4-6 6 0 4 6 6 0" stroke="white" strokeWidth="2.5" strokeLinecap="round" /></svg>
     )
   },
   {
@@ -54,18 +54,11 @@ const PRESETS = [
   },
 ];
 
-// Helper to render preset, custom lucide icon, or logo image
 function renderAvatarContent(avatarPreset, logoUrl, size = 20) {
   if (logoUrl) {
     return {
       bg: "#f3f4f6",
-      element: (
-        <img
-          src={logoUrl}
-          alt="Avatar"
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      ),
+      element: <img src={logoUrl} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />,
     };
   }
 
@@ -86,7 +79,6 @@ function renderAvatarContent(avatarPreset, logoUrl, size = 20) {
   };
 }
 
-// Helper to parse URLs in string and return clickable React <a> elements
 const renderFormattedMessage = (text) => {
   if (!text) return text;
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -118,7 +110,7 @@ const renderFormattedMessage = (text) => {
 export default function SandboxPreview({ config, faqs }) {
   const brandColor = config?.brandColor || "#00A460";
   const botName = config?.botName || "Aria";
-  
+
   const avatar = renderAvatarContent(config?.avatarPreset, config?.logoUrl, 20);
 
   let starterPrompts = [];
@@ -136,7 +128,15 @@ export default function SandboxPreview({ config, faqs }) {
   const [isLoading, setIsLoading] = useState(false);
   const [openFaqId, setOpenFaqId] = useState(null);
 
-  const activeFaqs = (faqs || []).filter((f) => !f._deleted);
+  // Group Active FAQs by category
+  const activeFaqs = (faqs || []).filter((f) => !f._deleted && f.isActive !== false);
+
+  const categorizedFaqs = activeFaqs.reduce((acc, faq) => {
+    const cat = faq.category || "General";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(faq);
+    return acc;
+  }, {});
 
   const handleSend = async (textOverride) => {
     const userMsg = typeof textOverride === "string" ? textOverride : input.trim();
@@ -189,7 +189,7 @@ export default function SandboxPreview({ config, faqs }) {
       position: "sticky",
       top: "32px",
     }}>
-      {/* Widget Header */}
+      {/* Header */}
       <div style={{ padding: "12px 14px", background: brandColor, color: "white", display: "flex", alignItems: "center", gap: "10px" }}>
         <div style={{
           width: "36px",
@@ -212,7 +212,7 @@ export default function SandboxPreview({ config, faqs }) {
         </div>
       </div>
 
-      {/* Widget Tabs */}
+      {/* Tabs */}
       <div style={{ display: "flex", background: "#f3f4f6", borderBottom: "1px solid #e5e7eb" }}>
         <div
           onClick={() => setActiveTab("chat")}
@@ -268,7 +268,7 @@ export default function SandboxPreview({ config, faqs }) {
         )}
       </div>
 
-      {/* Chat Panel */}
+      {/* Chat Tab */}
       <div style={{ flex: 1, display: activeTab === "chat" ? "flex" : "none", flexDirection: "column", background: "#f9fafb", overflowY: "auto" }}>
         <div style={{ flex: 1, padding: "12px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
           {messages.map((m, i) => (
@@ -301,7 +301,6 @@ export default function SandboxPreview({ config, faqs }) {
             </div>
           )}
 
-          {/* Starter Prompts */}
           {starterPrompts.length > 0 && messages.length === 1 && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", marginTop: "5px" }}>
               {starterPrompts.map((prompt, i) => (
@@ -325,7 +324,7 @@ export default function SandboxPreview({ config, faqs }) {
           )}
         </div>
 
-        {/* Input Area */}
+        {/* Input */}
         <div style={{ display: "flex", padding: "10px 12px", borderTop: "1px solid #e1e3e5", background: "white", alignItems: "center", gap: "8px" }}>
           <input
             type="text"
@@ -359,72 +358,72 @@ export default function SandboxPreview({ config, faqs }) {
         </div>
       </div>
 
-      {/* FAQ Panel */}
-      <div style={{ flex: 1, display: activeTab === "faq" ? "block" : "none", overflowY: "auto", padding: "0", background: "#f4f4f5" }}>
-        {activeFaqs.length === 0 ? (
-          <div style={{ color: "#71717a", textAlign: "center", marginTop: "24px", fontSize: "13px" }}>
-            No FAQs available at the moment.
+      {/* Categorized FAQ Panel */}
+      <div style={{ flex: 1, display: activeTab === "faq" ? "block" : "none", overflowY: "auto", padding: "16px", background: "#f8fafc" }}>
+        {Object.keys(categorizedFaqs).length === 0 ? (
+          <div style={{ color: "#71717a", textAlign: "center", marginTop: "32px", fontSize: "13px" }}>
+            No active FAQs available.
           </div>
         ) : (
-          activeFaqs.map((faq) => {
-            const isOpen = openFaqId === faq.id;
-
-            return (
-              <div key={faq.id} style={{ borderBottom: "1px solid #e4e4e7", background: "#f4f4f5" }}>
-                <div
-                  onClick={() => setOpenFaqId(isOpen ? null : faq.id)}
-                  style={{
-                    fontWeight: "600",
-                    padding: "18px 20px",
-                    fontSize: "14px",
-                    color: "#09090b",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "16px",
-                    userSelect: "none",
-                    transition: "background 0.15s ease",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#ececee")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "#f4f4f5")}
-                >
-                  <span style={{
-                    fontSize: "20px",
-                    lineHeight: "1",
-                    fontWeight: "300",
-                    width: "18px",
-                    height: "18px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    color: "#18181b",
-                  }}>
-                    {isOpen ? "—" : "+"}
-                  </span>
-                  <span>{faq.question}</span>
-                </div>
-                <div style={{
-                  display: "grid",
-                  gridTemplateRows: isOpen ? "1fr" : "0fr",
-                  transition: "grid-template-rows 0.3s ease",
-                }}>
-                  <div style={{ overflow: "hidden" }}>
-                    <div style={{ padding: "0 20px 20px 54px", fontSize: "13.5px", color: "#27272a", lineHeight: "1.6", fontWeight: "400" }}>
-                      {faq.answer}
-                    </div>
-                  </div>
-                </div>
+          Object.entries(categorizedFaqs).map(([categoryName, faqList]) => (
+            <div key={categoryName} style={{ marginBottom: "18px" }}>
+              <div style={{ fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "8px", textTransform: "capitalize" }}>
+                {categoryName}
               </div>
-            );
-          })
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {faqList.map((faq) => {
+                  const isOpen = openFaqId === faq.id;
+
+                  return (
+                    <div
+                      key={faq.id}
+                      onClick={() => setOpenFaqId(isOpen ? null : faq.id)}
+                      style={{
+                        background: "#fff",
+                        border: isOpen ? `1.5px solid ${brandColor}` : "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "10px 12px",
+                        cursor: "pointer",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                        backgroundColor: isOpen ? "#f0fdf4" : "#fff",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: "12.5px", fontWeight: "600", color: isOpen ? brandColor : "#0f172a" }}>
+                          {faq.question}
+                        </span>
+                        <ChevronRight
+                          size={14}
+                          color={isOpen ? brandColor : "#94a3b8"}
+                          style={{
+                            transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                            transition: "transform 0.15s ease",
+                            flexShrink: 0,
+                            marginLeft: "8px"
+                          }}
+                        />
+                      </div>
+
+                      {isOpen && (
+                        <div style={{ marginTop: "6px", fontSize: "12px", color: "#4b5563", lineHeight: "1.45" }}>
+                          {faq.answer}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))
         )}
       </div>
 
-      {/* Track Panel */}
+      {/* Track Tab */}
       <div style={{ flex: 1, display: activeTab === "track" ? "block" : "none", padding: "16px", background: "#f9fafb" }}>
         <div style={{ background: "white", padding: "16px", borderRadius: "12px", border: "1px solid #e5e7eb", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-          <p style={{ fontSize: "13px", color: "#6b7280", margin: "0 0 16px 0", textAlign: "center" }}>
+          <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 16px 0", textAlign: "center" }}>
             Enter your details to get your latest order status.
           </p>
           <input

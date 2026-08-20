@@ -23,7 +23,7 @@
     return d.innerHTML;
   }
 
-  // Lucide SVG Path Dictionary (Stroke-based 24x24 viewBox)
+  // Lucide SVG Path Dictionary
   const LUCIDE_PATHS = {
     user: `<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
     smile: `<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>`,
@@ -64,7 +64,7 @@
       yellow: { bg: "#eab308", svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 5l3.9 8.26L33 14.6l-6.5 6.33 1.53 8.94L20 25.5l-8.03 4.37 1.53-8.94L7 14.6l9.1-1.34L20 5z" fill="white"/></svg>` },
       pink: { bg: "#ec4899", svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 34s-14-9.35-14-19a8 8 0 0116 0 8 8 0 0116 0c0 9.65-14 19-14 19z" fill="white"/></svg>` },
       teal: { bg: "#14b8a6", svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="14" width="20" height="16" rx="3" fill="white"/><rect x="15" y="19" width="4" height="4" rx="1" fill="#14b8a6"/><rect x="21" y="19" width="4" height="4" rx="1" fill="#14b8a6"/><path d="M20 8v6" stroke="white" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="7" r="2" fill="white"/><path d="M13 30v3M27 30v3" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>` },
-      indigo: { bg: "#6366f1", svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20c2-6 4-6 6 0s4 6 6 0 4-6 6 0 4-6 6 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>` },
+      indigo: { bg: "#6366f1", svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 20c2-6 4-6 6 0s4 6 6 0 4-6 6 0 4 6 6 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>` },
       orange: { bg: "#f97316", svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7a11 11 0 00-11 11c0 4.5 2.5 8 6 10v4h10v-4c3.5-2 6-5.5 6-10A11 11 0 0020 7z" fill="white"/><circle cx="15" cy="18" r="2.5" fill="#f97316"/><circle cx="25" cy="18" r="2.5" fill="#f97316"/><path d="M17 30h6M17 33h6" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/></svg>` }
     };
 
@@ -99,28 +99,30 @@
 
   function injectStyles() {
     const avatar = getAvatarDetails(config || {});
+    const brandColor = config?.brandColor || '#00A460';
+
     const styles = `
       #sm-widget { position: fixed; bottom: 20px; right: 20px; z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
       #sm-fab { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.15); color: white; background: ${avatar.bg}; padding: 0px; box-sizing: border-box; overflow: hidden }
       #sm-fab img, #sm-fab svg { width: 100%; height: 100%; object-fit: cover; }
       #sm-window { display: none; width: 320px; height: 500px; max-height: 80vh; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); flex-direction: column; overflow: hidden; position: absolute; bottom: 65px; right: 0; border: 1px solid #e1e3e5; }
       #sm-window.open { display: flex; }
-      #sm-header { padding: 12px 14px; background: ${config?.brandColor || '#00A460'}; color: white; display: flex; align-items: center; gap: 10px; }
+      #sm-header { padding: 12px 14px; background: ${brandColor}; color: white; display: flex; align-items: center; gap: 10px; }
       .sm-avatar { width: 36px; height: 36px; border-radius: 50%; background: ${avatar.bg}; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
       .sm-avatar img { width: 100%; height: 100%; object-fit: cover; }
       .sm-avatar svg { width: 100%; height: 100%; }
       #sm-tabs { display: flex; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; }
       .sm-tab { flex: 1; text-align: center; padding: 8px; cursor: pointer; font-size: 12px; color: #6b7280; font-weight: 500; border-bottom: 2px solid transparent; }
-      .sm-tab.active { color: ${config?.brandColor || '#00A460'}; border-bottom-color: ${config?.brandColor || '#00A460'}; font-weight: 600; background: white; }
+      .sm-tab.active { color: ${brandColor}; border-bottom-color: ${brandColor}; font-weight: 600; background: white; }
       .sm-panel { flex: 1; display: none; overflow-y: auto; padding: 12px; background: #f9fafb; }
-      .sm-panel.active { display: flex; flexDirection: column; display: block; }
+      .sm-panel.active { display: flex; flex-direction: column; }
       .sm-msg { margin-bottom: 10px; max-width: 85%; padding: 10px 12px; border-radius: 12px; font-size: 12px; line-height: 1.4; word-break: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-      .sm-msg.user { background: ${config?.brandColor || '#00A460'}; color: white; margin-left: auto; border-top-right-radius: 4px; }
+      .sm-msg.user { background: ${brandColor}; color: white; margin-left: auto; border-top-right-radius: 4px; }
       .sm-msg.bot { background: white; color: #111; margin-right: auto; border-top-left-radius: 4px; border: 1px solid #e5e7eb; }
       #sm-input-area { display: flex; padding: 10px 12px; border-top: 1px solid #e1e3e5; background: white; align-items: center; gap: 8px; }
       #sm-message-input { flex: 1; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 20px; outline: none; font-size: 12px; color: #111; }
       #sm-message-input::placeholder { color: #9ca3af; }
-      #sm-send-btn { width: 28px; height: 28px; border-radius: 50%; background: ${config?.brandColor || '#00A460'}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; padding: 0; }
+      #sm-send-btn { width: 28px; height: 28px; border-radius: 50%; background: ${brandColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; padding: 0; }
       #sm-lead-popup { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
       .sm-lead-content { background: white; padding: 16px; border-radius: 12px; width: 100%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
       .sm-lead-content h3 { font-size: 14px; margin: 0 0 6px 0; color: #111; }
@@ -129,53 +131,31 @@
       .sm-lead-actions { display: flex; gap: 8px; }
       .sm-lead-actions button { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; }
       #sm-lead-popup-skip { background: #f3f4f6; color: #4b5563; }
-      #sm-lead-submit { background: ${config?.brandColor || '#00A460'}; color: white; }
+      #sm-lead-submit { background: ${brandColor}; color: white; }
       .sm-indicator { font-style: italic; color: #9ca3af; box-shadow: none; background: transparent; border: none; padding: 4px 12px; }
       
-      #sm-panel-faq { padding: 0; background: #f4f4f5; }
-      .sm-faq-item { border-bottom: 1px solid #e4e4e7; background: #f4f4f5; }
-      .sm-faq-q { 
-        font-weight: 500; 
-        font-size: 13.5px; 
-        color: #09090b; 
-        cursor: pointer; 
-        display: flex; 
-        align-items: center; 
-        gap: 16px; 
-        padding: 18px 20px; 
-        user-select: none; 
-        transition: background 0.15s ease;
-      }
-      .sm-faq-q:hover { background: #ececee; }
-      .sm-faq-icon { 
-        font-size: 20px; 
-        line-height: 1; 
-        font-weight: 300; 
-        width: 18px; 
-        height: 18px; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        flex-shrink: 0; 
-        color: #18181b; 
-      }
-      .sm-faq-a-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
-      .sm-faq-item.open .sm-faq-a-wrapper { grid-template-rows: 1fr; }
-      .sm-faq-a { overflow: hidden; }
-      .sm-faq-a-inner { 
-        padding: 0 20px 20px 54px; 
-        font-size: 13px; 
-        color: #27272a; 
-        line-height: 1.6; 
-        font-weight: 400; 
-      }
+      /* New Categorized FAQ Styles */
+      #sm-panel-faq { padding: 14px; background: #f8fafc; overflow-y: auto; }
+      .sm-faq-cat-group { margin-bottom: 16px; }
+      .sm-faq-cat-title { font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 8px; text-transform: capitalize; }
+      .sm-faq-cat-list { display: flex; flex-direction: column; gap: 6px; }
+      .sm-faq-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.15s ease; }
+      .sm-faq-item.open { background: #f0fdf4; border-color: ${brandColor}; }
+      .sm-faq-q { display: flex; justify-content: space-between; align-items: center; user-select: none; }
+      .sm-faq-q-text { font-size: 12.5px; font-weight: 600; color: #0f172a; flex: 1; padding-right: 8px; }
+      .sm-faq-item.open .sm-faq-q-text { color: ${brandColor}; }
+      .sm-faq-icon { width: 14px; height: 14px; stroke: #94a3b8; stroke-width: 2; transition: transform 0.15s ease; flex-shrink: 0; }
+      .sm-faq-item.open .sm-faq-icon { stroke: ${brandColor}; transform: rotate(90deg); }
+      .sm-faq-a { display: none; margin-top: 6px; font-size: 12px; color: #4b5563; line-height: 1.45; }
+      .sm-faq-item.open .sm-faq-a { display: block; animation: sm-faq-expand 0.2s ease; }
+      @keyframes sm-faq-expand { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
 
       .sm-track-container { padding: 16px; background: #f9fafb; }
       .sm-track-card { background: white; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 16px; }
       .sm-track-card p { font-size: 13px; color: #6b7280; margin: 0 0 16px 0; text-align: center; }
       .sm-form-input { width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; font-size: 13px; outline: none; transition: border-color 0.2s; }
-      .sm-form-input:focus { border-color: ${config?.brandColor || '#00A460'}; }
-      .sm-btn-primary { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; background: ${config?.brandColor || '#00A460'}; color: white; transition: opacity 0.2s; }
+      .sm-form-input:focus { border-color: ${brandColor}; }
+      .sm-btn-primary { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; background: ${brandColor}; color: white; transition: opacity 0.2s; }
       .sm-btn-primary:hover { opacity: 0.9; }
 
       #sm-track-result { display: none; font-size: 13px; line-height: 1.6; color: #111; white-space: pre-wrap; background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
@@ -183,8 +163,8 @@
       @keyframes sm-fade-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
       .sm-starter-prompts { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-top: 5px; margin-bottom: 10px; }
-      .sm-starter-btn { background: white; border: 1px solid ${config?.brandColor || '#00A460'}; border-radius: 20px; padding: 5px 12px; font-size: 11px; color: ${config?.brandColor || '#00A460'}; cursor: pointer; transition: all 0.2s ease; font-family: inherit; }
-      .sm-starter-btn:hover { background: ${config?.brandColor || '#00A460'}; color: white; }
+      .sm-starter-btn { background: white; border: 1px solid ${brandColor}; border-radius: 20px; padding: 5px 12px; font-size: 11px; color: ${brandColor}; cursor: pointer; transition: all 0.2s ease; font-family: inherit; }
+      .sm-starter-btn:hover { background: ${brandColor}; color: white; }
     `;
     const styleEl = document.createElement('style');
     styleEl.innerHTML = styles;
@@ -440,44 +420,59 @@
   function renderFaqs() {
     const faqContainer = document.getElementById('sm-faq-content');
     if (!config.capFaqs || !config.faqs || config.faqs.length === 0) {
-      faqContainer.innerHTML = `<div style="color:#8e8e93;text-align:center;margin-top:20px;font-size:12px;">No FAQs available at the moment.</div>`;
+      faqContainer.innerHTML = `<div style="color:#8e8e93;text-align:center;margin-top:32px;font-size:12px;">No FAQs available at the moment.</div>`;
       return;
     }
 
+    // Group FAQs by category
+    const categorized = config.faqs.reduce((acc, faq) => {
+      const cat = faq.category || "General";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(faq);
+      return acc;
+    }, {});
+
     faqContainer.innerHTML = '';
 
-    config.faqs.forEach(faq => {
-      const item = document.createElement('div');
-      item.className = 'sm-faq-item';
+    Object.entries(categorized).forEach(([categoryName, faqList]) => {
+      const catGroup = document.createElement('div');
+      catGroup.className = 'sm-faq-cat-group';
 
-      const q = document.createElement('div');
-      q.className = 'sm-faq-q';
-      q.innerHTML = `<span class="sm-faq-icon">+</span><span>${esc(faq.question)}</span>`;
+      const catTitle = document.createElement('div');
+      catTitle.className = 'sm-faq-cat-title';
+      catTitle.textContent = categoryName;
+      catGroup.appendChild(catTitle);
 
-      const aWrapper = document.createElement('div');
-      aWrapper.className = 'sm-faq-a-wrapper';
-      const a = document.createElement('div');
-      a.className = 'sm-faq-a';
-      a.innerHTML = `<div class="sm-faq-a-inner">${esc(faq.answer)}</div>`;
-      aWrapper.appendChild(a);
+      const catList = document.createElement('div');
+      catList.className = 'sm-faq-cat-list';
 
-      q.addEventListener('click', () => {
-        const isOpen = item.classList.contains('open');
+      faqList.forEach(faq => {
+        const item = document.createElement('div');
+        item.className = 'sm-faq-item';
 
-        document.querySelectorAll('.sm-faq-item').forEach(i => {
-          i.classList.remove('open');
-          const icon = i.querySelector('.sm-faq-icon');
-          if (icon) icon.textContent = '+';
+        item.innerHTML = `
+          <div class="sm-faq-q">
+            <span class="sm-faq-q-text">${esc(faq.question)}</span>
+            <svg class="sm-faq-icon" viewBox="0 0 24 24" fill="none">
+              <path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="sm-faq-a">${esc(faq.answer)}</div>
+        `;
+
+        item.addEventListener('click', () => {
+          const isOpen = item.classList.contains('open');
+          document.querySelectorAll('.sm-faq-item').forEach(i => i.classList.remove('open'));
+          if (!isOpen) {
+            item.classList.add('open');
+          }
         });
 
-        if (!isOpen) {
-          item.classList.add('open');
-          q.querySelector('.sm-faq-icon').textContent = '—';
-        }
+        catList.appendChild(item);
       });
-      item.appendChild(q);
-      item.appendChild(aWrapper);
-      faqContainer.appendChild(item);
+
+      catGroup.appendChild(catList);
+      faqContainer.appendChild(catGroup);
     });
   }
 
