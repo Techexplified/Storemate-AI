@@ -81,13 +81,12 @@ export const action = async ({ request }) => {
     const config = await db.chatbotConfig.findUnique({ where: { shop } });
     if (!config) return data({ error: "Chatbot not configured" }, { status: 404, headers: HEADERS });
 
-    if (orderLookup?.orderNumber && (orderLookup?.email || orderLookup?.phone)) {
+    if (orderLookup?.orderNumber && orderLookup?.email) {
       const trackConfig = config.orderTrackingConfig || {};
       const order = await lookupOrder(
         shop,
         orderLookup.orderNumber,
-        orderLookup.email || null,
-        orderLookup.phone || null,
+        orderLookup.email,
         trackConfig
       );
       const reply = formatOrderReply(order, config.botName, trackConfig);

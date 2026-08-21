@@ -3,12 +3,10 @@ import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
 const DEFAULT_TRACK_CONFIG = {
-    contactMethod: "email",
     heading: "Track Your Order",
     description: "Enter your order details to check the latest order status.",
     orderPlaceholder: "Order number (e.g. #1020)",
-    contactPlaceholder: "Email used at checkout",
-    
+    emailPlaceholder: "Email used at checkout",
     buttonText: "Track Order",
     successMessage: "We've found your order.",
     errorMessage: "We couldn't find an order with those details. Please check and try again.",

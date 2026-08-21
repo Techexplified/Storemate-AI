@@ -32,7 +32,7 @@ async function fetchProducts(admin) {
   }).join("\n\n") || "";
 }
 
-export async function lookupOrder(shop, orderNumber, email, phone, trackConfig) {
+export async function lookupOrder(shop, orderNumber, email, trackConfig) {
   const session = await db.session.findFirst({
     where: { shop },
     select: { accessToken: true },
@@ -53,7 +53,6 @@ export async function lookupOrder(shop, orderNumber, email, phone, trackConfig) 
             nodes {
               name
               email
-              phone
               createdAt
               currentTotalPriceSet {
                 shopMoney {
@@ -73,14 +72,10 @@ export async function lookupOrder(shop, orderNumber, email, phone, trackConfig) 
                 trackingInfo {
                   number
                   url
+                  company
                 }
+                estimatedDeliveryAt
               }
-              fulfillmentOrders(first: 1) {
-                nodes {
-                  deliveryMethod {
-                    ... on DeliveryMethod {
-                  id
-            }
             }
           }
         }
@@ -94,21 +89,15 @@ export async function lookupOrder(shop, orderNumber, email, phone, trackConfig) 
   if (!res.ok) return null;
 
   const { data } = await res.json();
-
   const order = data?.orders?.nodes?.[0];
   if (!order) return null;
 
-  // Verify email OR phone matches
+  // Verify email matches
   const emailMatch = (order.email || "").toLowerCase() === (email || "").toLowerCase();
-  const phoneMatch = phone && (order.phone || "").replace(/\D/g, "").endsWith(phone.replace(/\D/g, "").slice(-4));
-
-  if (!emailMatch && !phoneMatch) {
-    return null;
-  }
+  if (!emailMatch) return null;
 
   return {
     number: order.name,
-    // Only include these if the merchant enabled them:
     status: trackConfig?.showFulfillmentStatus ? order.displayFulfillmentStatus : null,
     financialStatus: order.displayFinancialStatus,
     createdAt: new Date(order.createdAt).toDateString(),
@@ -121,7 +110,7 @@ export async function lookupOrder(shop, orderNumber, email, phone, trackConfig) 
       ? order.fulfillments.flatMap(f => f.trackingInfo).map(t => t.url).filter(Boolean).join(", ") || null
       : null,
     courierName: trackConfig?.showCourierName
-      ? (order.fulfillments[0]?.trackingCompany || null)
+      ? (order.fulfillments.flatMap(f => f.trackingInfo).map(t => t.company).filter(Boolean).join(", ") || null)
       : null,
     estimatedDelivery: trackConfig?.showEstimatedDelivery
       ? (order.fulfillments[0]?.estimatedDeliveryAt
