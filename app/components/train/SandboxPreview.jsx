@@ -107,7 +107,7 @@ const renderFormattedMessage = (text) => {
   });
 };
 
-export default function SandboxPreview({ config, faqs }) {
+export default function SandboxPreview({ config, faqs, trackConfig = {} }) {
   const brandColor = config?.brandColor || "#00A460";
   const botName = config?.botName || "Aria";
 
@@ -424,20 +424,20 @@ export default function SandboxPreview({ config, faqs }) {
       <div style={{ flex: 1, display: activeTab === "track" ? "block" : "none", padding: "16px", background: "#f9fafb" }}>
         <div style={{ background: "white", padding: "16px", borderRadius: "12px", border: "1px solid #e5e7eb", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
           <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 16px 0", textAlign: "center" }}>
-            Enter your details to get your latest order status.
+            {trackConfig.description || "Enter your details to get your latest order status."}
           </p>
           <input
             type="text"
-            placeholder="Order number (e.g. #1020)"
+            placeholder={trackConfig.orderPlaceholder || "Order number (e.g. #1020)"}
             style={{ width: "100%", padding: "10px 12px", marginBottom: "12px", border: "1px solid #e5e7eb", borderRadius: "8px", boxSizing: "border-box", fontSize: "13px", outline: "none" }}
           />
           <input
             type="email"
-            placeholder="Email used at checkout"
+            placeholder={trackConfig.emailPlaceholder || "Email used at checkout"}
             style={{ width: "100%", padding: "10px 12px", marginBottom: "12px", border: "1px solid #e5e7eb", borderRadius: "8px", boxSizing: "border-box", fontSize: "13px", outline: "none" }}
           />
           <button style={{ width: "100%", padding: "10px", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "600", background: brandColor, color: "white" }}>
-            Track Order (Disabled in Sandbox)
+            {trackConfig.buttonText || "Track Order"} (Disabled in Sandbox)
           </button>
         </div>
       </div>

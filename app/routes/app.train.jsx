@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { data, useLoaderData, useFetcher, useSearchParams } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
-import { BookOpen, MessageSquare, ChevronRight } from "lucide-react";
+import { BookOpen, MessageSquare, ChevronRight, Truck } from "lucide-react";
 
 import KbTab from "../components/train/Kbtab";
 import FaqTab from "../components/train/FaqTab";
 import SandboxPreview from "../components/train/SandboxPreview";
+import TrackOrderTab from "../components/train/TrackOrderTab";
 
 export async function loader({ request }) {
   const { session } = await authenticate.admin(request);
@@ -23,6 +24,7 @@ export async function loader({ request }) {
     supportUrl: merchantConfig?.supportUrl ?? "",
     policies,
     faqs,
+    trackConfig: chatbotConfig?.orderTrackingConfig || null,
     chatbotConfig: chatbotConfig || {
       botName: "Aria",
       brandColor: "#00A460",
@@ -70,6 +72,15 @@ export async function action({ request }) {
         }
       }
 
+      // Track Order Config
+      if (payload.trackConfig !== undefined) {
+        await tx.chatbotConfig.upsert({
+          where: { shop },
+          update: { orderTrackingConfig: payload.trackConfig },
+          create: { shop, botName: "Aria", orderTrackingConfig: payload.trackConfig },
+        });
+      }
+
       // FAQs (Now with category & isActive)
       for (const f of payload.faqs ?? []) {
         const faqPayload = {
@@ -106,6 +117,7 @@ export default function TrainPage() {
   const [customInstructions, setCustomInstructions] = useState(loaderData.chatbotConfig?.customInstructions || "");
   const [policies, setPolicies] = useState(loaderData.policies);
   const [faqs, setFaqs] = useState(loaderData.faqs);
+  const [trackConfig, setTrackConfig] = useState(loaderData.trackConfig);
   const [isDirty, setIsDirty] = useState(false);
   const [alertMsg, setAlertMsg] = useState("");
 
@@ -116,11 +128,12 @@ export default function TrainPage() {
     setCustomInstructions(loaderData.chatbotConfig?.customInstructions || "");
     setPolicies(loaderData.policies);
     setFaqs(loaderData.faqs);
+    setTrackConfig(loaderData.trackConfig);
     setIsDirty(false);
   }, [loaderData]);
 
   const handleSave = () => {
-    const payload = { supportUrl, customInstructions, policies, faqs };
+    const payload = { supportUrl, customInstructions, policies, faqs, trackConfig };
     fetcher.submit({ intent: "train-save", payload: JSON.stringify(payload) }, { method: "post" });
   };
 
@@ -172,7 +185,7 @@ export default function TrainPage() {
                 <div style={{ position: "absolute", left: "15px", top: "30px", bottom: "60px", width: "2px", background: "#f1f5f9", zIndex: 0 }} />
 
                 {/* 1. Knowledge Base Card */}
-                <div style={{ position: "relative", marginBottom: "20px" }}>
+                <div style={{ position: "relative" }}>
                   <div style={{
                     position: "absolute", left: "-44px", top: "24px", width: "32px", height: "32px", borderRadius: "50%",
                     background: "#fff", border: "2px solid #e9d5ff", color: "#a855f7",
@@ -254,6 +267,46 @@ export default function TrainPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* 3. Track Order Card */}
+                <div style={{ position: "relative" }}>
+                  <div style={{
+                    position: "absolute", left: "-44px", top: "24px", width: "32px", height: "32px", borderRadius: "50%",
+                    background: "#fff", border: "2px solid #d1fae5", color: "#10b981",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "600", fontSize: "14px", zIndex: 2
+                  }}>
+                    3
+                  </div>
+
+                  <div
+                    onClick={() => setTab("track-order")}
+                    style={{
+                      display: "flex", alignItems: "center", padding: "20px", background: "#fff", border: "1px solid #e2e8f0",
+                      borderRadius: "12px", cursor: "pointer", transition: "all 0.2s",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.05)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.02)")}
+                  >
+                    <div style={{ width: "52px", height: "52px", borderRadius: "12px", background: "#ecfdf5", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: "16px" }}>
+                      <Truck size={24} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: "600", color: "#0f172a" }}>Track Order</h3>
+                      <p style={{ margin: 0, fontSize: "13px", color: "#64748b", lineHeight: "1.4" }}>
+                        Customize how customers can track their orders and what details to collect.
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginLeft: "16px" }}>
+                      <span style={{ padding: "4px 10px", background: trackConfig ? "#ecfdf5" : "#f1f5f9", color: trackConfig ? "#10b981" : "#64748b", borderRadius: "20px", fontSize: "11px", fontWeight: "600" }}>
+                        {trackConfig ? "Completed" : "Not configured"}
+                      </span>
+                    </div>
+                    <div style={{ color: "#cbd5e1", marginLeft: "16px" }}>
+                      <ChevronRight size={20} />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -279,12 +332,19 @@ export default function TrainPage() {
                   onBack={() => setTab("menu")}
                 />
               )}
+              {currentTab === "track-order" && (
+                <TrackOrderTab
+                  trackConfig={trackConfig}
+                  setTrackConfig={(val) => { setTrackConfig(val); setIsDirty(true); }}
+                  onBack={() => setTab("menu")}
+                />
+              )}
             </div>
           )}
         </div>
 
         {/* RIGHT COLUMN */}
-        <SandboxPreview config={config} faqs={faqs} />
+        <SandboxPreview config={config} faqs={faqs} trackConfig={trackConfig} />
       </div>
 
       {/* Floating Save Bar */}
@@ -302,6 +362,7 @@ export default function TrainPage() {
                   setCustomInstructions(loaderData.chatbotConfig?.customInstructions || "");
                   setPolicies(loaderData.policies);
                   setFaqs(loaderData.faqs);
+                  setTrackConfig(loaderData.trackConfig);
                   setIsDirty(false);
                 }}
                 style={{ background: "transparent", border: "none", color: "#cbd5e1", fontSize: "14px", fontWeight: "500", cursor: "pointer", padding: "8px 12px" }}

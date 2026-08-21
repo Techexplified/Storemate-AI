@@ -5,6 +5,7 @@
   if (document.getElementById('sm-widget')) return;
 
   let config = null;
+  let trackConfig = {};
   let conversationId = sessionStorage.getItem('sm_session') || crypto.randomUUID();
   sessionStorage.setItem('sm_session', conversationId);
   let leadCaptured = safeStorage(`sm_lead_${shop}`) !== null;
@@ -172,6 +173,7 @@
   }
 
   function renderWidget(config) {
+    trackConfig = config.trackConfig || {};
     const container = document.createElement('div');
     container.id = 'sm-widget';
 
@@ -204,10 +206,10 @@
         </div>
         <div id="sm-panel-track" class="sm-panel sm-track-container">
           <div class="sm-track-card">
-            <p>Enter your details to get your latest order status.</p>
-            <input type="text" id="sm-track-order" placeholder="Order number (e.g. #1020)" class="sm-form-input">
-            <input type="email" id="sm-track-email" placeholder="Email used at checkout" class="sm-form-input">
-            <button id="sm-track-submit" class="sm-btn-primary">Track Order</button>
+            <p>${esc(trackConfig.description || "Enter your details to get your latest order status.")}</p>
+            <input type="text" id="sm-track-order" placeholder="${esc(trackConfig.orderPlaceholder || "Order number (e.g. #1020)")}" class="sm-form-input">
+            <input type="email" id="sm-track-email" placeholder="${esc(trackConfig.emailPlaceholder || "Email used at checkout")}" class="sm-form-input">
+            <button id="sm-track-submit" class="sm-btn-primary">${esc(trackConfig.buttonText || "Track Order")}</button>
           </div>
           <div id="sm-track-result"></div>
         </div>
@@ -323,11 +325,11 @@
 
     document.getElementById('sm-track-submit').addEventListener('click', async () => {
       const orderNumber = document.getElementById('sm-track-order').value.trim();
-      const email = document.getElementById('sm-track-email').value.trim();
+      const email = document.getElementById('sm-track-email')?.value.trim() || '';
       const resultEl = document.getElementById('sm-track-result');
 
       if (!orderNumber || !email) {
-        resultEl.textContent = "Please fill in both fields.";
+        resultEl.textContent = trackConfig.errorMessage || "Please fill in the required fields.";
         resultEl.classList.add('show');
         return;
       }
@@ -342,7 +344,7 @@
           body: JSON.stringify({ shop, sessionId: conversationId, orderLookup: { orderNumber, email } })
         });
         const data = await response.json();
-        resultEl.textContent = response.ok ? data.reply : "Something went wrong. Please try again.";
+        resultEl.textContent = response.ok ? data.reply : (trackConfig.errorMessage || "Something went wrong. Please try again.");
       } catch {
         resultEl.textContent = "I'm temporarily unavailable, please try again in a moment.";
       }
