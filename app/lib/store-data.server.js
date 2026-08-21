@@ -32,7 +32,7 @@ async function fetchProducts(admin) {
   }).join("\n\n") || "";
 }
 
-export async function lookupOrder(shop, orderNumber, email) {
+export async function lookupOrder(shop, orderNumber, email, phone, trackConfig) {
   const session = await db.session.findFirst({
     where: { shop },
     select: { accessToken: true },
@@ -53,6 +53,7 @@ export async function lookupOrder(shop, orderNumber, email) {
             nodes {
               name
               email
+              phone
               createdAt
               currentTotalPriceSet {
                 shopMoney {
@@ -74,6 +75,12 @@ export async function lookupOrder(shop, orderNumber, email) {
                   url
                 }
               }
+              fulfillmentOrders(first: 1) {
+                nodes {
+                  deliveryMethod {
+                    ... on DeliveryMethod {
+                  id
+            }
             }
           }
         }
@@ -90,31 +97,37 @@ export async function lookupOrder(shop, orderNumber, email) {
 
   const order = data?.orders?.nodes?.[0];
   if (!order) return null;
-  
-  // Verify email ourselves
-  if ((order.email || "").toLowerCase() !== email.toLowerCase()) {
+
+  // Verify email OR phone matches
+  const emailMatch = (order.email || "").toLowerCase() === (email || "").toLowerCase();
+  const phoneMatch = phone && (order.phone || "").replace(/\D/g, "").endsWith(phone.replace(/\D/g, "").slice(-4));
+
+  if (!emailMatch && !phoneMatch) {
     return null;
   }
 
   return {
     number: order.name,
-    status: order.displayFulfillmentStatus,
+    // Only include these if the merchant enabled them:
+    status: trackConfig?.showFulfillmentStatus ? order.displayFulfillmentStatus : null,
     financialStatus: order.displayFinancialStatus,
     createdAt: new Date(order.createdAt).toDateString(),
     total: `${order.currentTotalPriceSet.shopMoney.currencyCode} ${order.currentTotalPriceSet.shopMoney.amount}`,
-    items: order.lineItems.nodes
-      .map(i => `${i.name} x${i.quantity}`)
-      .join(", "),
-    trackingNumbers: order.fulfillments
-      .flatMap(f => f.trackingInfo)
-      .map(t => t.number)
-      .filter(Boolean)
-      .join(", ") || null,
-    trackingUrls: order.fulfillments
-      .flatMap(f => f.trackingInfo)
-      .map(t => t.url)
-      .filter(Boolean)
-      .join(", ") || null,
+    items: order.lineItems.nodes.map(i => `${i.name} x${i.quantity}`).join(", "),
+    trackingNumbers: trackConfig?.showTrackingNumber
+      ? order.fulfillments.flatMap(f => f.trackingInfo).map(t => t.number).filter(Boolean).join(", ") || null
+      : null,
+    trackingUrls: trackConfig?.showTrackingLink
+      ? order.fulfillments.flatMap(f => f.trackingInfo).map(t => t.url).filter(Boolean).join(", ") || null
+      : null,
+    courierName: trackConfig?.showCourierName
+      ? (order.fulfillments[0]?.trackingCompany || null)
+      : null,
+    estimatedDelivery: trackConfig?.showEstimatedDelivery
+      ? (order.fulfillments[0]?.estimatedDeliveryAt
+        ? new Date(order.fulfillments[0].estimatedDeliveryAt).toDateString()
+        : null)
+      : null,
   };
 }
 
@@ -158,9 +171,9 @@ export async function buildSystemPrompt(shop, admin, config) {
     ja: "Japanese", ko: "Korean", it: "Italian", nl: "Dutch"
   };
 
-  const lang = config.language ? LANGUAGE_MAP[config?.language] : "English"; 
+  const lang = config.language ? LANGUAGE_MAP[config?.language] : "English";
 
-return `
+  return `
 You are ${config.botName}, an e-commerce customer support assistant for this store. 
 Your SOLE purpose is to assist customers with product inquiries, store policies, FAQs, and orders.
 You MUST NEVER answer questions about coding, general trivia, math, creative writing, or non-store topics under any circumstances.
@@ -182,8 +195,8 @@ ${!config.capProducts ? `Do NOT answer product questions. Tell the customer you 
 ${!config.capPolicies ? `Do NOT answer policy, shipping or returns questions. Tell the customer you cannot help with that.` : `If a policy is provided as a link (http/https), give the exact link to the customer so they can read it. If it is provided as text, use the text to answer their specific questions.`}
 ${!config.capFaqs ? `Do NOT answer FAQ questions. Tell the customer you cannot help with that.` : ""}
 ${config.capOrderTracking
-  ? `Tell users to go to the Track tab to track their orders.`
-  : `Do NOT help with order tracking. Tell the customer you cannot help with that.`}
+      ? `Tell users to go to the Track tab to track their orders.`
+      : `Do NOT help with order tracking. Tell the customer you cannot help with that.`}
 
 If you cannot answer a question, first ask if the customer wants contact links. Only if they say yes, direct them to support: Email: ${merchant?.supportEmail || "N/A"} | URL: ${merchant?.supportUrl || "N/A"}
 `.trim();

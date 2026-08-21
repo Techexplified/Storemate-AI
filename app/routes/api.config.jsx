@@ -32,8 +32,8 @@ export async function loader({ request }) {
     let starterPrompts = [];
     if (config?.starterPrompts) {
       try {
-        starterPrompts = typeof config.starterPrompts === "string" 
-          ? JSON.parse(config.starterPrompts) 
+        starterPrompts = typeof config.starterPrompts === "string"
+          ? JSON.parse(config.starterPrompts)
           : config.starterPrompts;
       } catch {
         starterPrompts = [];
@@ -53,6 +53,22 @@ export async function loader({ request }) {
         faqs: faqs ?? [],
         supportEmail: merchant?.supportEmail ?? null,
         supportUrl: merchant?.supportUrl ?? null,
+        trackConfig: config?.orderTrackingConfig ?? {
+          contactMethod: "email",
+          heading: "Track Your Order",
+          description: "Enter your order details to check the latest order status.",
+          orderPlaceholder: "Order number (e.g. #1020)",
+          contactPlaceholder: "Email used at checkout",
+          
+          buttonText: "Track Order",
+          successMessage: "We've found your order.",
+          errorMessage: "We couldn't find an order with those details. Please check and try again.",
+          showEstimatedDelivery: true,
+          showFulfillmentStatus: true,
+          showTrackingNumber: true,
+          showCourierName: true,
+          showTrackingLink: true,
+        },
       }),
       { status: 200, headers: CORS_HEADERS }
     );

@@ -50,6 +50,7 @@ model ChatbotConfig {
   capFaqs          Boolean @default(true)
   setupComplete    Boolean  @default(false)
   customInstructions String? 
+  orderTrackingConfig Json?
 }
 
 model MerchantConfig {

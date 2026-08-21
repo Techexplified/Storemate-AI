@@ -29,24 +29,26 @@ function extractOrderInfo(messages) {
   };
 }
 
-function formatOrderReply(order, botName) {
-  if (!order) return "I couldn't find an order with those details. Please double-check your order number and email.";
-
-  let reply = `Here's your order status, ${order.number}:\n\n`
-    + `• Status: ${order.status}\n`
-    + `• Payment: ${order.financialStatus}\n`
-    + `• Placed: ${order.createdAt}\n`
-    + `• Total: ${order.total}\n`
-    + `• Items: ${order.items}`;
-
-  if (order.trackingNumbers) {
-    reply += `\n• Tracking: ${order.trackingNumbers}`;
-  }
-  if (order.trackingUrls) {
-    reply += `\n• Track here: ${order.trackingUrls}`;
+function formatOrderReply(order, botName, trackConfig = {}) {
+  if (!order) {
+    return trackConfig.errorMessage || "I couldn't find an order with those details. Please double-check your order number and email.";
   }
 
-  return reply;
+  const successPrefix = trackConfig.successMessage ? `${trackConfig.successMessage}\n\n` : "";
+
+  let reply = `${successPrefix}Here's your order status, ${order.number}:\n\n`;
+
+  if (order.status)        reply += `• Status: ${order.status}\n`;
+  if (order.financialStatus) reply += `• Payment: ${order.financialStatus}\n`;
+  if (order.createdAt)     reply += `• Placed: ${order.createdAt}\n`;
+  if (order.total)         reply += `• Total: ${order.total}\n`;
+  if (order.items)         reply += `• Items: ${order.items}\n`;
+  if (order.estimatedDelivery) reply += `• Estimated Delivery: ${order.estimatedDelivery}\n`;
+  if (order.trackingNumbers)   reply += `• Tracking: ${order.trackingNumbers}\n`;
+  if (order.courierName)       reply += `• Courier: ${order.courierName}\n`;
+  if (order.trackingUrls)      reply += `• Track here: ${order.trackingUrls}\n`;
+
+  return reply.trim();
 }
 
 async function logMessages(shop, sessionId, customerName, customerEmail, userMessage, assistantReply) {
@@ -63,14 +65,14 @@ export const action = async ({ request }) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: HEADERS });
   if (request.method !== "POST") return data({ error: "Method not allowed" }, { status: 405, headers: HEADERS });
 
- try {
+  try {
     const body = await request.json();
     let { shop, messages, sessionId, customerName = "Guest", isPreview, customerEmail = null, orderLookup } = body;
 
-//     if (isPreview && !shop) {
-//       const { session } = await authenticate.admin(request);
-//       shop = session.shop;
-//     }
+    //     if (isPreview && !shop) {
+    //       const { session } = await authenticate.admin(request);
+    //       shop = session.shop;
+    //     }
 
     if (!shop || !sessionId || (!messages?.length && !orderLookup)) {
       return data({ error: "Missing fields" }, { status: 400, headers: HEADERS });
@@ -79,9 +81,16 @@ export const action = async ({ request }) => {
     const config = await db.chatbotConfig.findUnique({ where: { shop } });
     if (!config) return data({ error: "Chatbot not configured" }, { status: 404, headers: HEADERS });
 
-    if (orderLookup?.orderNumber && orderLookup?.email) {
-      const order = await lookupOrder(shop, orderLookup.orderNumber, orderLookup.email);
-      const reply = formatOrderReply(order, config.botName);
+    if (orderLookup?.orderNumber && (orderLookup?.email || orderLookup?.phone)) {
+      const trackConfig = config.orderTrackingConfig || {};
+      const order = await lookupOrder(
+        shop,
+        orderLookup.orderNumber,
+        orderLookup.email || null,
+        orderLookup.phone || null,
+        trackConfig
+      );
+      const reply = formatOrderReply(order, config.botName, trackConfig);
       if (!isPreview) await logMessages(shop, sessionId, customerName, customerEmail, `[Order Tracking] #${orderLookup.orderNumber}`, reply);
       return data({ reply }, { headers: HEADERS });
     }
@@ -108,7 +117,7 @@ export const action = async ({ request }) => {
     return data({ reply }, { headers: HEADERS });
 
   } catch (e) {
-     if (e instanceof Response) throw e;
+    if (e instanceof Response) throw e;
     console.error("Chat error:", e);
     return data({ error: e.message || "Something went wrong" }, { status: 500, headers: HEADERS });
   }
