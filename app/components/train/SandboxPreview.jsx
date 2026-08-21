@@ -107,7 +107,8 @@ const renderFormattedMessage = (text) => {
   });
 };
 
-export default function SandboxPreview({ config, faqs, trackConfig = {} }) {
+export default function SandboxPreview({ config, faqs, trackConfig }) {
+  trackConfig = trackConfig || {};
   const brandColor = config?.brandColor || "#00A460";
   const botName = config?.botName || "Aria";
 
