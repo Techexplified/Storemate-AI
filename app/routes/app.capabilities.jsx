@@ -13,7 +13,8 @@ import {
   Headphones, 
   ShieldCheck, 
   Clock, 
-  Check
+  Check,
+  ArrowLeft
 } from "lucide-react";
 
 const SKILLS = [
@@ -139,11 +140,57 @@ export default function Capabilities() {
     );
   };
 
+  const handleSkip = () => {
+    fetcher.submit(
+      {
+        capProducts: "true",
+        capOrderTracking: "true",
+        capPolicies: "true",
+        capFaqs: "true",
+        intent: "finish",
+      },
+      { method: "POST" }
+    );
+  };
+
   const enabledCount = Object.values(selected).filter(Boolean).length;
 
   return (
     <AppProvider i18n={enTranslations}>
-      <div style={{ minHeight: "100vh", background: "#fcfcfd", display: "flex", flexDirection: "column" }}>
+      <div style={{ minHeight: "100vh", background: "#fcfcfd", display: "flex", flexDirection: "column", position: "relative" }}>
+
+        {/* Top Left Back Button */}
+        <button
+          onClick={() => navigate("/app/appearance?mode=edit")}
+          style={{
+            position: "absolute",
+            top: "24px",
+            left: "24px",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "14px",
+            color: "#64748b",
+            fontWeight: "500",
+            padding: "8px 12px",
+            borderRadius: "8px",
+            transition: "all 0.15s ease",
+            zIndex: 10
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#f1f5f9";
+            e.currentTarget.style.color = "#0f172a";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "#64748b";
+          }}
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
 
         {/* Header */}
         <div style={{ textAlign: "center", padding: "40px 24px 32px" }}>
@@ -323,28 +370,34 @@ export default function Capabilities() {
           </p>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {/* Skip Button */}
             <button
-              onClick={() => navigate("/app/appearance?mode=edit")}
+              onClick={handleSkip}
+              disabled={fetcher.state !== "idle"}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
                 border: "1px solid #e1e3e5",
                 borderRadius: "8px",
-                padding: "8px 16px",
+                padding: "8px 20px",
                 background: "#fff",
                 cursor: "pointer",
                 fontSize: "13px",
-                color: "#374151",
+                color: "#6b7280",
                 fontWeight: "500",
-                transition: "background-color 0.15s ease"
+                transition: "all 0.15s ease"
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f9fafb")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#f9fafb";
+                e.currentTarget.style.color = "#111827";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#fff";
+                e.currentTarget.style.color = "#6b7280";
+              }}
             >
-              ← Back
+              Skip
             </button>
 
+            {/* Complete Button */}
             <button
               onClick={handleComplete}
               disabled={fetcher.state !== "idle" || enabledCount === 0}
